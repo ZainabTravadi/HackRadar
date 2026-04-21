@@ -1,0 +1,29 @@
+{
+  "name": "hackradar-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-ready Node.js and TypeScript backend for HackRadar.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "test:full": "ts-node src/debug/fullTest.ts"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.39.3",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.30.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
