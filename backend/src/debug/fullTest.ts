@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '../db';
 import { updateStatuses } from '../pipeline/statusUpdater';
 import { scrapeDevpost } from '../scrapers/devpost';
+import { scrapeMLH } from '../scrapers/mlh';
 
 type ResultRow = Record<string, unknown>;
 
@@ -43,6 +44,12 @@ export async function runFullTest(): Promise<void> {
     console.info('Starting full system test...');
 
     await scrapeDevpost();
+    console.log('[MLH] Running MLH scraper...');
+    try {
+      await scrapeMLH();
+    } catch (error: unknown) {
+      console.error('[MLH] Scraper failed:', toErrorMessage(error));
+    }
     await updateStatuses();
 
     const totalCountRows = rowsFromResult(await db.execute(sql`SELECT COUNT(*) AS total FROM hackathons;`));

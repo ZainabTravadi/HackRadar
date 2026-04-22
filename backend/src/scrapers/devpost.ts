@@ -1,15 +1,24 @@
-import axios from 'axios';
 import { and, eq } from 'drizzle-orm';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Response as PlaywrightResponse,
+} from 'playwright';
 
 import { db } from '../db';
 import { hackathons, scrapeLogs, type Hackathon } from '../db/schema';
 import { normalize, type RawHackathon } from '../pipeline/normalizer';
 
 const DEVPOST_BASE_URL = 'https://devpost.com';
-const REQUEST_TIMEOUT_MS = 15_000;
-const REQUEST_DELAY_MS = 3_000;
+const DEVPOST_LISTING_URL = 'https://devpost.com/hackathons';
+const REQUEST_TIMEOUT_MS = 25_000;
+const REQUEST_DELAY_MS = 1_000;
 const MAX_PAGES = 10;
-const MAX_API_PAGES = 15;
+const MAX_PAGE_RETRIES = 3;
+const API_PER_PAGE = 24;
+const DEVPOST_STATUSES = ['upcoming', 'open'] as const;
 
 const REQUEST_HEADERS = {
   'User-Agent':
@@ -19,6 +28,7 @@ const REQUEST_HEADERS = {
 } as const;
 
 type UpsertOutcome = 'new' | 'updated' | 'skipped';
+type DevpostListingStatus = (typeof DEVPOST_STATUSES)[number];
 
 interface DevpostApiHackathon {
   id: number | string;
@@ -29,12 +39,13 @@ interface DevpostApiHackathon {
   prize_amount?: string | number | null;
   registrations_count?: number | string | null;
   location?: string | null;
-  themes?: string[] | null;
+  themes?: unknown[] | null;
   organization_name?: string | null;
 }
 
 interface DevpostApiMeta {
   total_pages?: number;
+  total_count?: number;
 }
 
 interface DevpostApiResponse {
@@ -45,56 +56,73 @@ interface DevpostApiResponse {
 interface ListingPageResult {
   hackathons: RawHackathon[];
   totalPages: number;
+  totalCount: number | null;
 }
 
-// Fetches one Devpost listing page from the JSON API and maps entries into RawHackathon records.
-export async function fetchListingPage(page: number): Promise<ListingPageResult> {
-  const maxAttempts = 3;
+interface StatusSummary {
+  status: DevpostListingStatus;
+  pagesProcessed: number;
+  pagesPlanned: number;
+  found: number;
+  inserted: number;
+  updated: number;
+}
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+interface InterceptedPagePayload {
+  responseUrl: string;
+  status: number;
+  payload: DevpostApiResponse;
+}
+
+interface CandidateIntercept {
+  responseUrl: string;
+  status: number;
+  payload: DevpostApiResponse;
+  itemCount: number;
+}
+
+// Fetches one Devpost listing page by intercepting JSON responses in Playwright.
+export async function fetchListingPage(
+  browserPage: Page,
+  pageNumber: number,
+  listingStatus: DevpostListingStatus,
+): Promise<ListingPageResult> {
+  const targetUrl = new URL(DEVPOST_LISTING_URL);
+  targetUrl.searchParams.set('status', listingStatus);
+  targetUrl.searchParams.set('page', String(pageNumber));
+  targetUrl.searchParams.set('per_page', String(API_PER_PAGE));
+
+  for (let attempt = 1; attempt <= MAX_PAGE_RETRIES; attempt += 1) {
     try {
-      console.log('[Devpost API] Fetching page:', page);
-      const response = await axios.get<DevpostApiResponse>('https://devpost.com/hackathons.json', {
-        params: {
-          status: 'upcoming',
-          page: page,
-          per_page: 24,
-        },
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-          Accept: 'application/json',
-        },
-      });
-      console.log('[Devpost API] Status:', response.status);
-      console.log('[Devpost API] Items:', (response.data.hackathons ?? []).length);
+      const intercepted = await navigateAndIntercept(browserPage, targetUrl.toString(), listingStatus, pageNumber);
 
-      const apiHackathons = Array.isArray(response.data?.hackathons) ? response.data.hackathons : [];
-      const totalPagesRaw = response.data?.meta?.total_pages;
+      const apiHackathons = Array.isArray(intercepted.payload.hackathons) ? intercepted.payload.hackathons : [];
+      const totalPagesRaw = intercepted.payload.meta?.total_pages;
       const totalPages = clampPages(typeof totalPagesRaw === 'number' && totalPagesRaw > 0 ? totalPagesRaw : 1);
+      const totalCountRaw = intercepted.payload.meta?.total_count;
+      const totalCount = typeof totalCountRaw === 'number' && totalCountRaw >= 0 ? Math.trunc(totalCountRaw) : null;
 
-      console.info(`[Devpost] Page ${page} fetched ${apiHackathons.length} hackathons from API`);
-      console.info(`[Devpost] API reported total pages: ${totalPages}`);
       console.info(
-        `[Devpost] Page ${page} sample titles: ${apiHackathons
-          .slice(0, 3)
-          .map((item) => item.title ?? '(untitled)')
-          .join(' | ')}`
+        `[Devpost] Page ${pageNumber} fetched. listingStatus=${listingStatus}, status=${intercepted.status}, items=${apiHackathons.length}, totalPages=${totalPages}, totalCount=${totalCount ?? 'unknown'}, api=${intercepted.responseUrl}`
       );
 
       const mapped = apiHackathons
         .map((item) => mapApiHackathonToRaw(item))
         .filter((item): item is RawHackathon => item !== null);
 
+      console.log(`[Devpost] ${listingStatus} page ${pageNumber}: ${mapped.length}`);
+
       return {
         hackathons: mapped,
         totalPages,
+        totalCount,
       };
     } catch (error: unknown) {
       console.warn(
-        `[Devpost] Listing API failed for page ${page} (attempt ${attempt}/${maxAttempts}): ${toErrorMessage(error)}`
+        `[Devpost] Intercept failed for status=${listingStatus}, page=${pageNumber} (attempt ${attempt}/${MAX_PAGE_RETRIES}): ${toErrorMessage(error)}`
       );
 
-      if (attempt < maxAttempts) {
+      if (attempt < MAX_PAGE_RETRIES) {
         await delay(1_500 * attempt);
         continue;
       }
@@ -103,7 +131,7 @@ export async function fetchListingPage(page: number): Promise<ListingPageResult>
     }
   }
 
-  return { hackathons: [], totalPages: 1 };
+  return { hackathons: [], totalPages: 1, totalCount: null };
 }
 
 // Upserts a single normalized record and reports whether it was inserted, updated, or skipped.
@@ -146,57 +174,103 @@ export async function scrapeDevpost(): Promise<void> {
   let totalFound = 0;
   let totalNew = 0;
   let totalUpdated = 0;
+  const statusSummaries: StatusSummary[] = [];
+  let browser: Browser | null = null;
+  let context: BrowserContext | null = null;
+  let page: Page | null = null;
 
   try {
-    let firstPageResult: ListingPageResult;
+    browser = await chromium.launch({ headless: true });
+    context = await browser.newContext({
+      userAgent: REQUEST_HEADERS['User-Agent'],
+      viewport: { width: 1920, height: 1080 },
+      extraHTTPHeaders: {
+        Accept: REQUEST_HEADERS.Accept,
+        'Accept-Language': REQUEST_HEADERS['Accept-Language'],
+      },
+    });
+    page = await context.newPage();
 
-    try {
-      firstPageResult = await fetchListingPage(1);
-    } catch (error: unknown) {
-      console.error(`[Devpost] Unable to fetch first page: ${toErrorMessage(error)}`);
-      firstPageResult = { hackathons: [], totalPages: 1 };
-    }
+    for (const listingStatus of DEVPOST_STATUSES) {
+      console.info(`[Devpost] Starting status pass: ${listingStatus}`);
 
-    const totalPages = clampPages(firstPageResult.totalPages);
-    const pagesToProcess = Math.min(totalPages, MAX_PAGES);
-    console.info(`[Devpost] Processing ${pagesToProcess} page(s) (API total: ${totalPages})`);
-
-    const pageResults: ListingPageResult[] = [firstPageResult];
-
-    for (let page = 2; page <= pagesToProcess; page += 1) {
-      await delay(REQUEST_DELAY_MS);
-      console.info(`[Devpost] Fetching listing page ${page}/${pagesToProcess}...`);
-
+      let firstPageResult: ListingPageResult;
       try {
-        const pageResult = await fetchListingPage(page);
-        pageResults.push(pageResult);
+        firstPageResult = await fetchListingPage(page, 1, listingStatus);
       } catch (error: unknown) {
-        console.error(`[Devpost] Skipping page ${page} due to API error: ${toErrorMessage(error)}`);
+        console.error(`[Devpost] Unable to fetch first page for status=${listingStatus}: ${toErrorMessage(error)}`);
+        firstPageResult = { hackathons: [], totalPages: 1, totalCount: null };
       }
-    }
 
-    for (const pageResult of pageResults) {
-      totalFound += pageResult.hackathons.length;
+      const totalPages = clampPages(firstPageResult.totalPages);
+      const fallbackPagesFromCount = pagesFromTotalCount(firstPageResult.totalCount, API_PER_PAGE);
+      const pagesToProcess = Math.min(totalPages > 1 ? totalPages : fallbackPagesFromCount, MAX_PAGES);
+      console.info(
+        `[Devpost] Status=${listingStatus} processing ${pagesToProcess} page(s) (API total pages: ${totalPages}, total count: ${firstPageResult.totalCount ?? 'unknown'}, fallback pages: ${fallbackPagesFromCount})`
+      );
 
-      for (const raw of pageResult.hackathons) {
+      const pageResults: ListingPageResult[] = [firstPageResult];
+      console.info(`[Devpost] Status=${listingStatus} items in page 1: ${firstPageResult.hackathons.length}`);
+
+      for (let pageNumber = 2; pageNumber <= pagesToProcess; pageNumber += 1) {
         await delay(REQUEST_DELAY_MS);
+        console.info(`[Devpost] Status=${listingStatus} fetching page ${pageNumber}/${pagesToProcess}...`);
 
         try {
-          const outcome = await upsertHackathon(raw);
-
-          if (outcome === 'new') {
-            totalNew += 1;
-            console.info(`[Devpost] Inserted new hackathon: ${raw.title}`);
-          } else if (outcome === 'updated') {
-            totalUpdated += 1;
-            console.info(`[Devpost] Updated hackathon: ${raw.title}`);
-          } else {
-            console.info(`[Devpost] Skipped unchanged hackathon: ${raw.title}`);
-          }
+          const pageResult = await fetchListingPage(page, pageNumber, listingStatus);
+          console.info(`[Devpost] Status=${listingStatus} items in page ${pageNumber}: ${pageResult.hackathons.length}`);
+          pageResults.push(pageResult);
         } catch (error: unknown) {
-          console.error(`[Devpost] Upsert failed for ${raw.sourceUrl}: ${toErrorMessage(error)}`);
+          console.error(
+            `[Devpost] Status=${listingStatus} skipping page ${pageNumber} due to API error: ${toErrorMessage(error)}`
+          );
         }
       }
+
+      let pagesProcessed = 0;
+      let statusFound = 0;
+      let statusNew = 0;
+      let statusUpdated = 0;
+
+      for (const pageResult of pageResults) {
+        pagesProcessed += 1;
+        totalFound += pageResult.hackathons.length;
+        statusFound += pageResult.hackathons.length;
+
+        for (const raw of pageResult.hackathons) {
+          try {
+            const outcome = await upsertHackathon(raw);
+
+            if (outcome === 'new') {
+              totalNew += 1;
+              statusNew += 1;
+              console.info(`[Devpost] Status=${listingStatus} inserted new hackathon: ${raw.title}`);
+            } else if (outcome === 'updated') {
+              totalUpdated += 1;
+              statusUpdated += 1;
+              console.info(`[Devpost] Status=${listingStatus} updated hackathon: ${raw.title}`);
+            } else {
+              console.info(`[Devpost] Status=${listingStatus} skipped unchanged hackathon: ${raw.title}`);
+            }
+          } catch (error: unknown) {
+            console.error(
+              `[Devpost] Status=${listingStatus} upsert failed for ${raw.sourceUrl}: ${toErrorMessage(error)}`
+            );
+          }
+        }
+      }
+
+      statusSummaries.push({
+        status: listingStatus,
+        pagesProcessed,
+        pagesPlanned: pagesToProcess,
+        found: statusFound,
+        inserted: statusNew,
+        updated: statusUpdated,
+      });
+      console.info(
+        `[Devpost] Status=${listingStatus} summary: pages=${pagesProcessed}/${pagesToProcess}, found=${statusFound}, new=${statusNew}, updated=${statusUpdated}, skipped=${Math.max(statusFound - statusNew - statusUpdated, 0)}`
+      );
     }
 
     if (scrapeLogId) {
@@ -216,6 +290,11 @@ export async function scrapeDevpost(): Promise<void> {
     console.info(
       `[Devpost] Scrape complete. found=${totalFound}, new=${totalNew}, updated=${totalUpdated}, skipped=${Math.max(totalFound - totalNew - totalUpdated, 0)}`
     );
+    for (const summary of statusSummaries) {
+      console.info(
+        `[Devpost] Status report ${summary.status}: pages=${summary.pagesProcessed}/${summary.pagesPlanned}, found=${summary.found}, new=${summary.inserted}, updated=${summary.updated}`
+      );
+    }
   } catch (error: unknown) {
     const message = toErrorMessage(error);
     console.error(`[Devpost] Scrape job failed: ${message}`);
@@ -235,7 +314,143 @@ export async function scrapeDevpost(): Promise<void> {
     }
 
     throw error;
+  } finally {
+    if (page) {
+      await page.close();
+    }
+
+    if (context) {
+      await context.close();
+    }
+
+    if (browser) {
+      await browser.close();
+    }
   }
+}
+
+async function navigateAndIntercept(
+  page: Page,
+  targetUrl: string,
+  expectedStatus: DevpostListingStatus,
+  expectedPage: number,
+): Promise<InterceptedPagePayload> {
+  const candidates: CandidateIntercept[] = [];
+
+  const onResponse = async (response: PlaywrightResponse): Promise<void> => {
+    if (!isExpectedDevpostApiResponse(response, expectedStatus, expectedPage)) {
+      return;
+    }
+
+    console.log('[DEBUG] API URL:', response.url());
+
+    try {
+      const data = (await response.json()) as unknown;
+      const itemCount = getHackathonItemsLength(data);
+      console.log('[DEBUG] items length:', itemCount);
+
+      if (!isHackathonsPayload(data)) {
+        return;
+      }
+
+      candidates.push({
+        responseUrl: response.url(),
+        status: response.status(),
+        payload: data,
+        itemCount,
+      });
+
+      console.log(
+        `[Devpost] Candidate response captured for status=${expectedStatus}, page=${expectedPage}, items=${itemCount}`,
+      );
+    } catch (error: unknown) {
+      console.warn(
+        `[Devpost] Failed to parse candidate response for status=${expectedStatus}, page=${expectedPage}: ${toErrorMessage(error)}`,
+      );
+    }
+  };
+
+  page.on('response', onResponse);
+
+  try {
+    await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: REQUEST_TIMEOUT_MS });
+    await delay(800);
+  } finally {
+    page.off('response', onResponse);
+  }
+
+  if (candidates.length === 0) {
+    throw new Error(`Timed out waiting for Devpost hackathon JSON response for ${targetUrl}`);
+  }
+
+  const bestCandidate = candidates.reduce((best, current) => (current.itemCount > best.itemCount ? current : best));
+  console.log(
+    `[Devpost] Selected best candidate for status=${expectedStatus}, page=${expectedPage}: items=${bestCandidate.itemCount}, url=${bestCandidate.responseUrl}`,
+  );
+
+  return {
+    responseUrl: bestCandidate.responseUrl,
+    status: bestCandidate.status,
+    payload: bestCandidate.payload,
+  };
+}
+
+function isExpectedDevpostApiResponse(
+  response: PlaywrightResponse,
+  expectedStatus: DevpostListingStatus,
+  expectedPage: number,
+): boolean {
+  const url = response.url();
+  if (!url.includes('devpost.com') || !url.includes('/api/hackathons')) {
+    return false;
+  }
+
+  const contentTypeHeader = response.headers()['content-type'] ?? '';
+  const contentType = contentTypeHeader.toLowerCase();
+  const isJson = contentType.includes('application/json') || contentType.includes('text/json');
+  if (!isJson) {
+    return false;
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return false;
+  }
+
+  const statusParam = parsedUrl.searchParams.get('status');
+  const pageParam = parsedUrl.searchParams.get('page');
+  const pageValue = pageParam ? Number(pageParam) : NaN;
+
+  if (statusParam && statusParam !== expectedStatus) {
+    return false;
+  }
+
+  if (pageParam) {
+    return Number.isFinite(pageValue) && Math.trunc(pageValue) === expectedPage;
+  }
+
+  return true;
+}
+
+function isHackathonsPayload(value: unknown): value is DevpostApiResponse {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return Array.isArray(record.hackathons);
+}
+
+function getHackathonItemsLength(value: unknown): number {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return 0;
+  }
+
+  const record = value as Record<string, unknown>;
+  const hackathons = record.hackathons;
+  return Array.isArray(hackathons) ? hackathons.length : 0;
 }
 
 function mapApiHackathonToRaw(item: DevpostApiHackathon): RawHackathon | null {
@@ -250,8 +465,8 @@ function mapApiHackathonToRaw(item: DevpostApiHackathon): RawHackathon | null {
   const { startDate, submissionDeadline } = parseSubmissionPeriodDates(item.submission_period_dates ?? null);
 
   const participantCount = toNumberOrNull(item.registrations_count);
-  const prizeText = item.prize_amount !== undefined && item.prize_amount !== null ? String(item.prize_amount) : undefined;
-  const devpostThemes = Array.isArray(item.themes) ? item.themes.filter((value) => typeof value === 'string') : [];
+  const prizeText = item.prize_amount !== undefined && item.prize_amount !== null ? String(item.prize_amount).trim() : undefined;
+  const devpostThemes = normalizeThemes(item.themes ?? null);
 
   return {
     title,
@@ -285,7 +500,7 @@ function parseSubmissionPeriodDates(value: string | null): {
   }
 
   const parts = value
-    .split(/\s*(?:-|–|—|to)\s*/i)
+    .split(/\s+(?:-|–|—|to)\s+/i)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 
@@ -336,12 +551,55 @@ function toNumberOrNull(value: number | string | null | undefined): number | nul
   return null;
 }
 
+function normalizeThemes(value: unknown[] | null): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const themes: string[] = [];
+
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      const normalized = entry.trim();
+      if (normalized.length > 0) {
+        themes.push(normalized);
+      }
+      continue;
+    }
+
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      continue;
+    }
+
+    const record = entry as Record<string, unknown>;
+    const labelCandidate = record.name ?? record.title ?? record.slug;
+    if (typeof labelCandidate !== 'string') {
+      continue;
+    }
+
+    const normalized = labelCandidate.trim();
+    if (normalized.length > 0) {
+      themes.push(normalized);
+    }
+  }
+
+  return themes;
+}
+
 function clampPages(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     return 1;
   }
 
-  return Math.min(Math.trunc(value), MAX_API_PAGES);
+  return Math.min(Math.trunc(value), MAX_PAGES);
+}
+
+function pagesFromTotalCount(totalCount: number | null, perPage: number): number {
+  if (totalCount === null || !Number.isFinite(totalCount) || totalCount <= 0 || perPage <= 0) {
+    return 1;
+  }
+
+  return Math.max(1, Math.ceil(totalCount / perPage));
 }
 
 function buildUpdateValues(normalized: ReturnType<typeof normalize>): Partial<Hackathon> {

@@ -10,14 +10,17 @@
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "test:full": "ts-node src/debug/fullTest.ts"
+    "test:full": "ts-node src/debug/fullTest.ts",
+    "test:playwright": "ts-node src/debug/testPlaywright.ts",
+    "test:intercept": "ts-node src/debug/testDevpostIntercept.ts"
   },
   "dependencies": {
     "axios": "^1.8.4",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.3",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "playwright": "^1.59.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
