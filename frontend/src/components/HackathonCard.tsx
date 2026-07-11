@@ -9,6 +9,7 @@ const platformStyles: Record<string, string> = {
   MLH: "bg-rose-50 text-rose-700 border-rose-100",
   Unstop: "bg-amber-50 text-amber-700 border-amber-100",
   Devfolio: "bg-violet-50 text-violet-700 border-violet-100",
+  default: "bg-slate-50 text-slate-700 border-slate-200",
 };
 
 export const HackathonCard = ({ h }: { h: Hackathon }) => {
@@ -24,7 +25,7 @@ export const HackathonCard = ({ h }: { h: Hackathon }) => {
         <span
           className={cn(
             "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-            platformStyles[h.platform]
+            platformStyles[h.platform] ?? platformStyles.default
           )}
         >
           {h.platform}

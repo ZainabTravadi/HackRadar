@@ -25,7 +25,32 @@ export interface RawHackathon {
   description: string;
   sourceUrl: string;
   sourceId: string;
-  source: 'devpost' | 'mlh' | 'unstop' | 'devfolio';
+  source:
+    | 'devpost'
+    | 'mlh'
+    | 'devfolio'
+    | 'unstop'
+    | 'dorahacks'
+    | 'taikai'
+    | 'hackerearth'
+    | 'hack2skill'
+    | 'reskilll'
+    | 'lablab'
+    | 'ethglobal'
+    | 'angelhack'
+    | 'hackclub'
+    | 'university'
+    | 'eventbrite'
+    | 'luma'
+    | 'meetup'
+    | 'github'
+    | 'reddit'
+    | 'discord'
+    | 'telegram'
+    | 'linkedin'
+    | 'twitter'
+    | 'facebook'
+    | 'google';
   imageUrl?: string;
   organizerName?: string;
   registrationDeadline?: Date;

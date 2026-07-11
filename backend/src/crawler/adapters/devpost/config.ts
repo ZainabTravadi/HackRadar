@@ -1,0 +1,18 @@
+export const devpostConfig = {
+  id: 'devpost',
+  name: 'Devpost',
+  baseUrl: 'https://devpost.com',
+  listingUrl: 'https://devpost.com/api/hackathons?status=upcoming&page=1&per_page=24',
+  detailUrlTemplate: 'https://devpost.com/software',
+  delayMs: 1000,
+  concurrency: 2,
+  retryAfterMs: 1500,
+  timeoutMs: 25_000,
+  enableProxy: false,
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  headers: { Accept: 'application/json,text/plain,*/*' },
+  maxPages: 3,
+  detailPageLimit: 25,
+  crawlType: 'json' as const,
+  sourceType: 'devpost' as const,
+};

@@ -1,0 +1,17 @@
+export const hack2skillConfig = {
+  id: 'hack2skill',
+  name: 'Hack2skill',
+  baseUrl: 'https://hack2skill.com',
+  listingUrl: 'https://hack2skill.com/api/v1/innovator/public/event/public-list?page=1&records=9&search=&start=2024-07-11T14:10:14.991Z&end=2027-07-11T14:10:14.991Z',
+  delayMs: 1000,
+  concurrency: 1,
+  retryAfterMs: 1500,
+  timeoutMs: 20_000,
+  enableProxy: false,
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  headers: { Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  maxPages: 2,
+  detailPageLimit: 25,
+  crawlType: 'json' as const,
+  sourceType: 'generic' as const,
+};

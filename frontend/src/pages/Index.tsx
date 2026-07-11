@@ -3,9 +3,9 @@ import { ArrowRight, Bell, Filter, Zap, Github } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { HackathonCard } from "@/components/HackathonCard";
-import { hackathons } from "@/data/hackathons";
+import { useHackathons } from "@/data/hackathons";
 
-const platforms = ["Devpost", "MLH", "Unstop", "Devfolio", "GitHub"];
+const platforms = ["Devpost", "MLH", "Unstop", "Devfolio", "Eventbrite", "Luma", "Meetup", "GitHub", "Reddit", "Discord", "Telegram", "LinkedIn", "X", "Facebook", "Google"];
 
 const features = [
   {
@@ -26,6 +26,7 @@ const features = [
 ];
 
 const Index = () => {
+  const { data: hackathons = [], isLoading } = useHackathons();
   const preview = [...hackathons].sort((a, b) =>
     new Date(a.registrationDeadline).getTime() - new Date(b.registrationDeadline).getTime()
   ).slice(0, 3);
@@ -48,7 +49,7 @@ const Index = () => {
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-balance text-lg text-muted-foreground">
-              500+ hackathons from Devpost, MLH, Unstop, and Devfolio — updated every 6 hours.
+              500+ hackathons from Devpost, MLH, Unstop, Devfolio, and more — updated every 6 hours.
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -132,9 +133,15 @@ const Index = () => {
             </Button>
           </div>
 
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {preview.map((h) => <HackathonCard key={h.slug} h={h} />)}
-          </div>
+          {isLoading ? (
+            <div className="mt-10 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              Loading live hackathons...
+            </div>
+          ) : (
+            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {preview.map((h) => <HackathonCard key={h.slug} h={h} />)}
+            </div>
+          )}
 
           <div className="mt-10 text-center md:hidden">
             <Button asChild variant="outline">

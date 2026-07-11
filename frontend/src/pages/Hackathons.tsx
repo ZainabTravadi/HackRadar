@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { hackathons, getStatus, getDaysUntil } from "@/data/hackathons";
+import { useHackathons, getStatus, getDaysUntil } from "@/data/hackathons";
 
 interface Props {
   presetTitle?: string;
@@ -31,6 +31,7 @@ const Hackathons = ({
   const [status, setStatus] = useState(presetStatus);
   const [country, setCountry] = useState(presetCountry);
   const [sort, setSort] = useState("closing");
+  const { data: hackathons = [], isLoading, error } = useHackathons();
 
   const themes = useMemo(() => {
     const s = new Set<string>();
@@ -139,7 +140,15 @@ const Hackathons = ({
             Showing <span className="font-medium text-foreground">{filtered.length}</span> hackathons
           </p>
 
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="rounded-2xl border border-dashed border-border p-16 text-center text-muted-foreground">
+              Loading live hackathons...
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-dashed border-border p-16 text-center text-muted-foreground">
+              Failed to load live hackathons.
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border p-16 text-center">
               <p className="text-muted-foreground">No hackathons match these filters.</p>
             </div>

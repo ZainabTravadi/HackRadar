@@ -1,0 +1,17 @@
+export const unstopConfig = {
+  id: 'unstop',
+  name: 'Unstop',
+  baseUrl: 'https://unstop.com',
+  listingUrl: 'https://unstop.com/hackathons',
+  delayMs: 1000,
+  concurrency: 1,
+  retryAfterMs: 1500,
+  timeoutMs: 20_000,
+  enableProxy: false,
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  headers: { Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  maxPages: 2,
+  detailPageLimit: 25,
+  crawlType: 'html' as const,
+  sourceType: 'generic' as const,
+};

@@ -1,18 +1,19 @@
 import 'dotenv/config';
 
+import './server';
+import { createDefaultScheduler } from './crawler/core/scheduler';
 import { validateData } from './debug/validateData';
 import { updateStatuses } from './pipeline/statusUpdater';
-import { scrapeDevpost } from './scrapers/devpost';
 
-// Application entry point for one-off scrape execution.
+// Application entry point for the reusable crawler framework.
 async function main(): Promise<void> {
   try {
     console.info('HackRadar backend starting...');
-    await scrapeDevpost();
+    const scheduler = createDefaultScheduler();
+    await scheduler.runAll();
     await updateStatuses();
     await validateData();
-    console.info('Initial scrape complete.');
-    process.exit(0);
+    console.info('Crawler run complete.');
   } catch (error: unknown) {
     console.error('Fatal error:', error);
     process.exit(1);

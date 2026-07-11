@@ -3,13 +3,23 @@ import { ArrowLeft, Calendar, Clock, ExternalLink, MapPin, Trophy, Users } from 
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { hackathons, formatDate, getDaysUntil, getStatus } from "@/data/hackathons";
+import { formatDate, getDaysUntil, getStatus, useHackathon } from "@/data/hackathons";
 
 const HackathonDetail = () => {
   const { slug } = useParams();
-  const h = hackathons.find((x) => x.slug === slug);
+  const { data: h, isLoading, error } = useHackathon(slug);
 
-  if (!h) {
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-24 text-center">
+          <h1 className="text-2xl font-semibold">Loading hackathon…</h1>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !h) {
     return (
       <Layout>
         <div className="container py-24 text-center">

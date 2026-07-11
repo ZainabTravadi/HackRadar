@@ -14,7 +14,34 @@ import {
 
 // Classification enums used across hackathon ingestion and analytics.
 export const modeEnum = pgEnum('mode_enum', ['online', 'in_person', 'hybrid', 'unknown']);
-export const sourceEnum = pgEnum('source_enum', ['devpost', 'mlh', 'unstop', 'devfolio', 'manual']);
+export const sourceEnum = pgEnum('source_enum', [
+  'devpost',
+  'mlh',
+  'devfolio',
+  'unstop',
+  'dorahacks',
+  'taikai',
+  'hackerearth',
+  'hack2skill',
+  'reskilll',
+  'lablab',
+  'ethglobal',
+  'angelhack',
+  'hackclub',
+  'university',
+  'eventbrite',
+  'luma',
+  'meetup',
+  'github',
+  'reddit',
+  'discord',
+  'telegram',
+  'linkedin',
+  'twitter',
+  'facebook',
+  'google',
+  'manual',
+]);
 export const statusEnum = pgEnum('status_enum', ['upcoming', 'open', 'closing_soon', 'ended']);
 export const prizeTypeEnum = pgEnum('prize_type_enum', ['cash', 'non_cash', 'mixed', 'none', 'unknown']);
 export const eligibilityEnum = pgEnum('eligibility_enum', ['open', 'student_only', 'invite_only', 'regional', 'unknown']);
