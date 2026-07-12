@@ -1,6 +1,8 @@
 import { Layout } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:3001";
+
 const endpoints = [
   {
     method: "GET",
@@ -51,7 +53,7 @@ const Api = () => (
         </p>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 font-mono text-sm shadow-card">
           <span className="text-muted-foreground">Base URL</span>
-          <span className="font-medium text-foreground">https://api.hackradar.dev</span>
+          <span className="font-medium text-foreground">{apiBaseUrl}</span>
         </div>
       </div>
     </section>

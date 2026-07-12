@@ -21,9 +21,14 @@ export function parseDoraHacksPayload(html: string): RawHackathon[] {
     }
 
     seen.add(normalizedUrl);
+    const surroundingText = $(element).closest('li, div, article, section, p').text().trim();
+    const description = surroundingText && surroundingText.length > 12
+      ? surroundingText.replace(/\s+/g, ' ').slice(0, 220)
+      : `DoraHacks event from ${normalizedUrl}`;
+
     items.push({
       title: title.length > 80 ? title.slice(0, 77) + '...' : title || 'DoraHacks event',
-      description: `DoraHacks event from ${normalizedUrl}`,
+      description,
       sourceUrl: normalizedUrl,
       sourceId: normalizedUrl,
       source: 'dorahacks',

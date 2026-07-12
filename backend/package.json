@@ -20,11 +20,13 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.3",
     "pg": "^8.13.3",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",
     "@types/pg": "^8.11.10",
+    "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.30.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"

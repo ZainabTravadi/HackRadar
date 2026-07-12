@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { HackathonCard } from "@/components/HackathonCard";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useSearchParams } from "react-router-dom";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useHackathons, getStatus, getDaysUntil } from "@/data/hackathons";
+import { filterHackathons, useHackathons } from "@/data/hackathons";
 
 interface Props {
   presetTitle?: string;
@@ -25,42 +27,55 @@ const Hackathons = ({
   presetStatus = "all",
   presetCountry = "all",
 }: Props) => {
-  const [query, setQuery] = useState("");
-  const [mode, setMode] = useState(presetMode);
-  const [theme, setTheme] = useState(presetTheme);
-  const [status, setStatus] = useState(presetStatus);
-  const [country, setCountry] = useState(presetCountry);
-  const [sort, setSort] = useState("closing");
-  const { data: hackathons = [], isLoading, error } = useHackathons();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [mode, setMode] = useState(searchParams.get("mode") ?? presetMode);
+  const [theme, setTheme] = useState(searchParams.get("theme") ?? presetTheme);
+  const [status, setStatus] = useState(searchParams.get("status") ?? presetStatus);
+  const [country, setCountry] = useState(searchParams.get("country") ?? presetCountry);
+  const [sort, setSort] = useState(searchParams.get("sort") ?? "closing");
+  const { data: hackathons = [], isLoading, error, refetch } = useHackathons();
 
   const themes = useMemo(() => {
     const s = new Set<string>();
     hackathons.forEach((h) => h.tags.forEach((t) => s.add(t)));
     return Array.from(s).sort();
-  }, []);
+  }, [hackathons]);
 
   const countries = useMemo(() => {
     const s = new Set<string>();
     hackathons.forEach((h) => h.country && s.add(h.country));
     return Array.from(s).sort();
-  }, []);
+  }, [hackathons]);
 
-  const filtered = useMemo(() => {
-    let list = hackathons.filter((h) => {
-      if (query && !h.title.toLowerCase().includes(query.toLowerCase()) && !h.description.toLowerCase().includes(query.toLowerCase())) return false;
-      if (mode !== "all" && h.mode !== mode) return false;
-      if (theme !== "all" && !h.tags.includes(theme)) return false;
-      if (country !== "all" && h.country !== country) return false;
-      if (status !== "all" && getStatus(h) !== status) return false;
-      return true;
-    });
-    if (sort === "closing") {
-      list = list.sort((a, b) => getDaysUntil(a.registrationDeadline) - getDaysUntil(b.registrationDeadline));
-    } else if (sort === "newest") {
-      list = list.sort((a, b) => a.updatedHoursAgo - b.updatedHoursAgo);
-    }
-    return list;
-  }, [query, mode, theme, status, country, sort]);
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    if (query) nextParams.set("q", query);
+    if (mode !== "all") nextParams.set("mode", mode);
+    if (theme !== "all") nextParams.set("theme", theme);
+    if (status !== "all") nextParams.set("status", status);
+    if (country !== "all") nextParams.set("country", country);
+    if (sort !== "closing") nextParams.set("sort", sort);
+    setSearchParams(nextParams, { replace: true });
+  }, [country, mode, query, setSearchParams, sort, status, theme]);
+
+  const filtered = useMemo(() => filterHackathons(hackathons, {
+    query,
+    mode,
+    theme,
+    status,
+    country,
+    sort,
+  }), [hackathons, query, mode, theme, status, country, sort]);
+
+  const resetFilters = () => {
+    setQuery("");
+    setMode("all");
+    setTheme("all");
+    setStatus("all");
+    setCountry("all");
+    setSort("closing");
+  };
 
   return (
     <Layout>
@@ -124,7 +139,9 @@ const Hackathons = ({
               </SelectContent>
             </Select>
 
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={resetFilters}>Reset</Button>
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>Refresh</Button>
               <span className="text-sm text-muted-foreground">Sort</span>
               <Select value={sort} onValueChange={setSort}>
                 <SelectTrigger className="w-[170px] rounded-full"><SelectValue /></SelectTrigger>

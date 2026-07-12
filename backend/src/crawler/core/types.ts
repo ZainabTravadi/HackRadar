@@ -1,5 +1,22 @@
 import type { NewHackathon } from '../../db/schema';
 
+export interface QualityMetrics {
+  pagesFetched: number;
+  linksDiscovered: number;
+  candidateEvents: number;
+  rejectedNavigationLinks: number;
+  rejectedAssets: number;
+  rejectedDuplicates: number;
+  rejectedInvalidPages: number;
+  rejectedMalformedDates: number;
+  rejectedInsufficientEvidence: number;
+  rejectedBlockedTitles: number;
+  rejectedBlockedUrls: number;
+  rejectedBlockedExtensions: number;
+  acceptedEvents: number;
+  pageClassifications: Record<string, number>;
+}
+
 export interface CrawlResult {
   source: string;
   pages: number;
@@ -11,6 +28,21 @@ export interface CrawlResult {
   durationMs: number;
   requests: number;
   averageResponseTimeMs: number;
+  accepted?: number;
+  rejected?: number;
+  invalidPages?: number;
+  parserErrors?: number;
+  qualityScore?: number;
+  qualityMetrics?: QualityMetrics;
+  acceptanceRate?: number;
+  rejectionRate?: number;
+  discoveryMetrics?: {
+    urlsFound: number;
+    canonicalUrls: number;
+    duplicates: number;
+    queued: number;
+    ignored: number;
+  };
 }
 
 export interface RawResponseSnapshot {
@@ -34,6 +66,9 @@ export interface SourceAdapter {
   validate(): Promise<unknown[]>;
 }
 
+export type SourceClassification = 'PRIMARY' | 'AGGREGATOR' | 'DISCOVERY';
+export type SourceMetadataQuality = 'full' | 'partial' | 'discovery';
+
 export interface AdapterConfig {
   id: string;
   name: string;
@@ -49,6 +84,13 @@ export interface AdapterConfig {
   detailPageLimit?: number;
   crawlType?: 'html' | 'json' | 'rss' | 'sitemap';
   sourceType?: 'generic' | 'devpost' | 'mlh';
+  sourceClassification?: SourceClassification;
+}
+
+export interface SourceCapabilities {
+  pagination: boolean;
+  detailPages: boolean;
+  metadataQuality: SourceMetadataQuality;
 }
 
 export type SourceKind =

@@ -27,10 +27,15 @@ import { TwitterAdapter } from '../adapters/twitter';
 import { UnstopAdapter } from '../adapters/unstop';
 import { UniversityAdapter } from '../adapters/university';
 import { GoogleAdapter } from '../adapters/google';
+import { getSourceMetadata, getSourceClassification } from './sourceMetadata';
 import { type CrawlResult, type SourceAdapter } from './types';
 
 export class Scheduler {
   constructor(private readonly adapters: SourceAdapter[] = []) {}
+
+  getAdapters(): SourceAdapter[] {
+    return this.adapters;
+  }
 
   async runAll(): Promise<void> {
     for (const adapter of this.adapters) {
@@ -40,10 +45,52 @@ export class Scheduler {
 
   async runOne(adapter: SourceAdapter): Promise<CrawlResult> {
     const startedAt = Date.now();
-    const insertedLog = await db.insert(scrapeLogs).values({ source: adapter.id as never }).returning({ id: scrapeLogs.id });
-    const scrapeLogId = insertedLog[0]?.id;
+    let scrapeLogId: string | undefined;
+    try {
+      const insertedLog = await db.insert(scrapeLogs).values({ source: adapter.id as never }).returning({ id: scrapeLogs.id });
+      scrapeLogId = insertedLog[0]?.id;
+    } catch (error: unknown) {
+      console.warn(`[${(adapter as any).name ?? adapter.id}] failed to write scrape log: ${error instanceof Error ? error.message : String(error)}; continuing without log id.`);
+      scrapeLogId = undefined;
+    }
 
     try {
+      const metadata = getSourceMetadata(adapter.id);
+      const classification = getSourceClassification((adapter as unknown as { config?: { sourceClassification?: string } }).config as any, adapter.id);
+      const isDiscovery = classification === 'DISCOVERY';
+
+      if (isDiscovery) {
+        const listings = await adapter.crawlListings();
+        const parsed = await adapter.parse();
+        const normalized = await adapter.normalize();
+        const issues = await adapter.validate();
+
+        for (const item of normalized) {
+          await db.insert(hackathons).values(item).onConflictDoNothing();
+        }
+
+        if (scrapeLogId) {
+          try {
+            await db
+              .update(scrapeLogs)
+              .set({
+                completedAt: new Date(),
+                recordsFound: listings.itemsFound,
+                recordsNew: listings.newItems,
+                recordsUpdated: listings.updatedItems,
+                success: true,
+              })
+              .where(eq(scrapeLogs.id, scrapeLogId));
+          } catch (error: unknown) {
+            console.warn(`[${(adapter as any).name ?? adapter.id}] failed to update scrape log: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
+        const discoveryMetrics = (adapter as unknown as { discoveryMetrics?: { urlsFound: number; canonicalUrls: number; duplicates: number; queued: number; ignored: number } }).discoveryMetrics;
+        console.info(`[${adapter.name}] classification=${metadata.classification} role=discovery pages=${listings.pages} items=${listings.itemsFound} urlsFound=${discoveryMetrics?.urlsFound ?? 0} canonical=${discoveryMetrics?.canonicalUrls ?? 0} duplicates=${discoveryMetrics?.duplicates ?? 0} queued=${discoveryMetrics?.queued ?? 0} ignored=${discoveryMetrics?.ignored ?? 0}`);
+        return listings;
+      }
+
       const listings = await adapter.crawlListings();
       const details = await adapter.crawlDetails();
       const parsed = await adapter.parse();
@@ -54,16 +101,22 @@ export class Scheduler {
         await db.insert(hackathons).values(item).onConflictDoNothing();
       }
 
-      await db
-        .update(scrapeLogs)
-        .set({
-          completedAt: new Date(),
-          recordsFound: listings.itemsFound,
-          recordsNew: listings.newItems,
-          recordsUpdated: listings.updatedItems,
-          success: true,
-        })
-        .where(eq(scrapeLogs.id, scrapeLogId));
+      if (scrapeLogId) {
+        try {
+          await db
+            .update(scrapeLogs)
+            .set({
+              completedAt: new Date(),
+              recordsFound: listings.itemsFound,
+              recordsNew: listings.newItems,
+              recordsUpdated: listings.updatedItems,
+              success: true,
+            })
+            .where(eq(scrapeLogs.id, scrapeLogId));
+        } catch (error: unknown) {
+          console.warn(`[${(adapter as any).name ?? adapter.id}] failed to update scrape log: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
 
       console.info(`[${adapter.name}] pages=${listings.pages} items=${listings.itemsFound} new=${listings.newItems} updated=${listings.updatedItems} duplicates=${listings.duplicates} failed=${listings.failed} durationMs=${Date.now() - startedAt} requests=${listings.requests} avgResponse=${listings.averageResponseTimeMs}`);
 
@@ -71,10 +124,14 @@ export class Scheduler {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (scrapeLogId) {
-        await db
-          .update(scrapeLogs)
-          .set({ completedAt: new Date(), success: false, errorMessage: message })
-          .where(eq(scrapeLogs.id, scrapeLogId));
+        try {
+          await db
+            .update(scrapeLogs)
+            .set({ completedAt: new Date(), success: false, errorMessage: message })
+            .where(eq(scrapeLogs.id, scrapeLogId));
+        } catch (err: unknown) {
+          console.warn(`[${(adapter as any).name ?? adapter.id}] failed to update scrape log on error: ${err instanceof Error ? err.message : String(err)}`);
+        }
       }
       console.error(`[${adapter.name}] failed: ${message}`);
       return {

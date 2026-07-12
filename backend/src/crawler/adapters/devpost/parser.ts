@@ -35,9 +35,11 @@ export function parseDevpostPayload(payload: unknown): RawHackathon[] {
     const startDate = parseDateFromRange(submissionPeriod, true);
     const submissionDeadline = parseDateFromRange(submissionPeriod, false);
 
+    const descriptionText = normalizeDescription(item.tagline?.trim() || '', title);
+
     return [{
       title,
-      description: item.tagline?.trim() || title,
+      description: descriptionText,
       sourceUrl,
       sourceId,
       source: 'devpost',
@@ -68,6 +70,15 @@ function parseDateFromRange(value: string, first: boolean): Date | undefined {
   const candidate = first ? parts[0] : parts[parts.length - 1];
   const parsed = new Date(candidate);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function normalizeDescription(value: string, fallbackTitle: string): string {
+  const cleaned = value.replace(/\s+/g, ' ').trim();
+  if (!cleaned) {
+    return fallbackTitle;
+  }
+
+  return cleaned.length > 220 ? `${cleaned.slice(0, 217)}...` : cleaned;
 }
 
 function toNumberOrNull(value: number | string | null | undefined): number | undefined {

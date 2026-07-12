@@ -53,6 +53,58 @@ export const getStatus = (h: Hackathon): Status => {
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
+export interface HackathonFilters {
+  query: string;
+  mode: string;
+  theme: string;
+  status: string;
+  country: string;
+  sort: string;
+}
+
+function matchesSearchQuery(value: string, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  const normalizedValue = value.toLowerCase();
+
+  return terms.every((term) => {
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^a-z0-9])${escapedTerm}([^a-z0-9]|$)`, "i").test(normalizedValue);
+  });
+}
+
+export function filterHackathons(hackathons: Hackathon[], filters: HackathonFilters): Hackathon[] {
+  let list = hackathons.filter((h) => {
+    const matchesQuery = [
+      h.title,
+      h.description,
+      h.organizer,
+      ...(h.tags ?? []),
+    ].some((value) => matchesSearchQuery(value, filters.query));
+
+    if (!matchesQuery) {
+      return false;
+    }
+
+    if (filters.mode !== "all" && h.mode !== filters.mode) return false;
+    if (filters.theme !== "all" && !h.tags.some((tag) => tag.toLowerCase() === filters.theme.toLowerCase())) return false;
+    if (filters.country !== "all" && h.country !== filters.country) return false;
+    if (filters.status !== "all" && getStatus(h) !== filters.status) return false;
+
+    return true;
+  });
+
+  if (filters.sort === "closing") {
+    list = list.sort((a, b) => getDaysUntil(a.registrationDeadline) - getDaysUntil(b.registrationDeadline));
+  } else if (filters.sort === "newest") {
+    list = list.sort((a, b) => a.updatedHoursAgo - b.updatedHoursAgo);
+  }
+
+  return list;
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`);
   if (!response.ok) {

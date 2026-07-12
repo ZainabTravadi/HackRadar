@@ -4,8 +4,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { HackathonCard } from "@/components/HackathonCard";
 import { useHackathons } from "@/data/hackathons";
-
-const platforms = ["Devpost", "MLH", "Unstop", "Devfolio", "Eventbrite", "Luma", "Meetup", "GitHub", "Reddit", "Discord", "Telegram", "LinkedIn", "X", "Facebook", "Google"];
+import { useMemo } from "react";
 
 const features = [
   {
@@ -27,9 +26,16 @@ const features = [
 
 const Index = () => {
   const { data: hackathons = [], isLoading } = useHackathons();
-  const preview = [...hackathons].sort((a, b) =>
+  const preview = useMemo(() => [...hackathons].sort((a, b) =>
     new Date(a.registrationDeadline).getTime() - new Date(b.registrationDeadline).getTime()
-  ).slice(0, 3);
+  ).slice(0, 3), [hackathons]);
+  const platformList = useMemo(() => Array.from(new Set(hackathons.map((h) => h.platform))).sort(), [hackathons]);
+  const nextDeadlineDays = useMemo(() => {
+    if (!preview.length) return "—";
+    const first = preview[0];
+    const days = Math.ceil((new Date(first.registrationDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return Math.max(days, 0);
+  }, [preview]);
 
   return (
     <Layout>
@@ -39,7 +45,7 @@ const Index = () => {
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-              Live · 500+ hackathons indexed
+              Live · {hackathons.length} hackathons indexed
             </div>
 
             <h1 className="text-balance text-5xl font-semibold tracking-tight text-foreground md:text-6xl lg:text-7xl">
@@ -49,7 +55,7 @@ const Index = () => {
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-balance text-lg text-muted-foreground">
-              500+ hackathons from Devpost, MLH, Unstop, Devfolio, and more — updated every 6 hours.
+              Live hackathons from the backend sources, refreshed from the current crawl results.
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -67,11 +73,11 @@ const Index = () => {
           {/* Floating accent cards */}
           <div className="pointer-events-none absolute left-4 top-32 hidden rotate-[-8deg] rounded-2xl border border-border bg-card p-3 shadow-elevated lg:block">
             <div className="text-xs text-muted-foreground">Closing in</div>
-            <div className="text-2xl font-semibold text-destructive">2d</div>
+            <div className="text-2xl font-semibold text-destructive">{nextDeadlineDays}d</div>
           </div>
           <div className="pointer-events-none absolute right-6 top-48 hidden rotate-[6deg] rounded-2xl border border-border bg-card p-3 shadow-elevated lg:block">
             <div className="text-xs text-muted-foreground">Total prizes</div>
-            <div className="text-2xl font-semibold text-foreground">$1.2M</div>
+            <div className="text-2xl font-semibold text-foreground">{platformList.length} sources</div>
           </div>
         </div>
       </section>
@@ -83,11 +89,11 @@ const Index = () => {
             Aggregating from top platforms
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-            {platforms.map((p) => (
+            {platformList.length > 0 ? platformList.map((p) => (
               <span key={p} className="text-base font-semibold text-muted-foreground/70 hover:text-foreground transition-smooth">
                 {p}
               </span>
-            ))}
+            )) : <span className="text-base font-semibold text-muted-foreground/70">No sources available yet</span>}
           </div>
         </div>
       </section>

@@ -113,6 +113,12 @@ export class TaikaiAdapter extends BaseAdapter {
       await this.delay(this.config.delayMs);
     }
 
+    const accepted = newItems + updatedItems;
+    const rejected = failed;
+    const qualityScore = itemsFound > 0 ? Math.round((accepted / Math.max(1, itemsFound)) * 100) : 0;
+
+    console.info(`[${this.name}] quality accepted=${accepted} rejected=${rejected} duplicates=${duplicates} invalidPages=0 parserErrors=0 score=${qualityScore}%`);
+
     return {
       source: this.id,
       pages,
@@ -124,6 +130,11 @@ export class TaikaiAdapter extends BaseAdapter {
       durationMs: Date.now() - startedAt,
       requests,
       averageResponseTimeMs: requests > 0 ? Math.round(totalResponseTime / requests) : 0,
+      accepted,
+      rejected,
+      invalidPages: 0,
+      parserErrors: 0,
+      qualityScore,
     };
   }
 

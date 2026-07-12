@@ -1,6 +1,7 @@
-import { BaseAdapter } from './baseAdapter';
+import { DiscoveryAdapter } from './discoveryAdapter';
+import type { NewHackathon } from '../../db/schema';
 
-export class GitHubEventsAdapter extends BaseAdapter {
+export class GitHubEventsAdapter extends DiscoveryAdapter {
   public readonly id = 'github';
   public readonly name = 'GitHub Events';
 
@@ -25,5 +26,9 @@ export class GitHubEventsAdapter extends BaseAdapter {
 
   protected override listingUrls(): string[] {
     return ['https://github.com/events'];
+  }
+
+  async normalize(): Promise<NewHackathon[]> {
+    return [];
   }
 }

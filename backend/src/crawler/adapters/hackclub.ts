@@ -48,7 +48,8 @@ export class HackClubAdapter extends BaseAdapter {
       const location = card.find('span[itemprop="address"]').first().parent().text().replace(/\s+/g, ' ').trim();
       const startDate = parseDate(card.find('span[itemprop="startDate"]').attr('content') ?? '');
       const endDate = parseDate(card.find('span[itemprop="endDate"]').attr('content') ?? '');
-      const description = [mode, location, card.find('footer').text().trim()].filter(Boolean).join(' ').slice(0, 500);
+      const footerText = card.find('footer').text().trim();
+      const description = [title, mode || location, footerText].filter(Boolean).join(' • ').slice(0, 500);
 
       if (!title || !sourceUrl || seen.has(sourceUrl)) {
         return;

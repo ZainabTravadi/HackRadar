@@ -1,6 +1,7 @@
-import { BaseAdapter } from './baseAdapter';
+import { DiscoveryAdapter } from './discoveryAdapter';
+import type { NewHackathon } from '../../db/schema';
 
-export class RedditAdapter extends BaseAdapter {
+export class RedditAdapter extends DiscoveryAdapter {
   public readonly id = 'reddit';
   public readonly name = 'Reddit';
 
@@ -25,5 +26,9 @@ export class RedditAdapter extends BaseAdapter {
 
   protected override listingUrls(): string[] {
     return ['https://www.reddit.com/r/hackathons/'];
+  }
+
+  async normalize(): Promise<NewHackathon[]> {
+    return [];
   }
 }
