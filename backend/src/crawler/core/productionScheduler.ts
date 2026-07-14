@@ -139,6 +139,7 @@ export class ProductionScheduler {
     const startedAt = new Date();
     let retryCount = 0;
     let lastError: string | undefined;
+    const crawlTimeoutMs = Math.max((config?.requestTimeoutMs ?? 30000) * 4, 120000);
 
     for (let attempt = 0; attempt < (config?.retryMaxAttempts || 3); attempt++) {
       if (attempt > 0) {
@@ -150,7 +151,11 @@ export class ProductionScheduler {
 
       try {
         await crawlStateService.recordCrawlStart(source);
-        const result = await this.executeCrawl(source, crawlType);
+        const result = await this.withTimeout(
+          this.executeCrawl(source, crawlType),
+          crawlTimeoutMs,
+          source,
+        );
         const completedAt = new Date();
         const durationMs = completedAt.getTime() - startedAt.getTime();
 
@@ -234,6 +239,24 @@ export class ProductionScheduler {
       validationFailures: 0, retryCount, failureCount: 1, success: false,
       errorMessage: lastError, skipped: false
     };
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, source: string): Promise<T> {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error(`Source ${source} timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   private async executeCrawl(source: string, crawlType: 'discovery' | 'primary' | 'incremental'): Promise<any> {

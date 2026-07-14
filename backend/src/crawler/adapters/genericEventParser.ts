@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 
 import type { RawHackathon } from '../../pipeline/normalizer';
+import { cleanHackathonDescription, cleanHackathonTitle, inferHackathonOrganizer } from '../../pipeline/qualityCleanup';
 
 interface GenericParserOptions {
   baseUrl: string;
@@ -32,6 +33,9 @@ export function parseGenericListingHtml(
     const href = normalizeUrl(anchor.attr('href'), options.baseUrl);
     const title = cleanText(anchor.text()) || cleanText(anchor.attr('aria-label')) || cleanText(anchor.attr('title'));
     const description = cleanText(anchor.closest('li, div, article, section, p').text()) || title;
+    const cardText = cleanText(anchor.closest('li, div, article, section, p').text());
+    const organizerText = cleanText(anchor.attr('data-organizer') || anchor.attr('data-host') || anchor.attr('data-creator'));
+    const locationText = cleanText(anchor.attr('data-location') || anchor.attr('data-venue'));
 
     if (!href || !title || seen.has(href) || isLikelyNoise(title, href)) {
       return;
@@ -54,20 +58,39 @@ export function parseGenericListingHtml(
     }
 
     seen.add(href);
-    const cleanedTitle = cleanTitle(title);
-    const cleanedDescription = cleanDescription(description || title, options.sourceName);
-
-    items.push({
-      title: truncate(cleanedTitle || `${options.sourceName} event`),
-      description: truncate(cleanedDescription || `${options.sourceName} event`),
+    const rawData = {
+      html: payload.slice(0, 1800),
+      href,
+      sourceName: options.sourceName,
+      cardText,
+      title,
+      organizerText,
+      locationText,
+      ariaLabel: cleanText(anchor.attr('aria-label')),
+      titleAttr: cleanText(anchor.attr('title')),
+    };
+    const cleanedTitle = cleanHackathonTitle(title, rawData, href);
+    const cleanedDescription = cleanHackathonDescription(description || title, cleanedTitle, rawData);
+    const organizerName = inferHackathonOrganizer({
+      title: cleanedTitle,
+      description: cleanedDescription || cleanedTitle,
       sourceUrl: href,
       sourceId: href,
       source,
-      rawData: {
-        html: payload.slice(0, 1800),
-        href,
-        sourceName: options.sourceName,
-      },
+      organizerName: organizerText || undefined,
+      locationText: locationText || undefined,
+      rawData,
+    }, cleanedDescription || cleanedTitle, locationText);
+
+    items.push({
+      title: truncate(cleanedTitle || `${options.sourceName} event`),
+      description: truncate(cleanedDescription || cleanedTitle || `${options.sourceName} event`),
+      sourceUrl: href,
+      sourceId: href,
+      source,
+      organizerName: organizerName || organizerText || undefined,
+      locationText: locationText || undefined,
+      rawData,
     });
   });
 

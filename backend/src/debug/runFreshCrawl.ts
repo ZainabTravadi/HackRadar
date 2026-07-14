@@ -4,7 +4,7 @@
 import 'dotenv/config';
 import { productionScheduler } from '../crawler/core/productionScheduler';
 import { db } from '../db';
-import { hackathons, crawlState, discoveryQueue, crawlQueue, retryQueue, deadLetterQueue, crawlerMetrics, scrapeLogs } from '../db/schema';
+import { hackathons, crawlState, discoveryQueue, crawlQueue, retryQueue, deadLetterQueue, crawlerMetrics, scrapeLogs, distributedLock } from '../db/schema';
 import { sql } from 'drizzle-orm';
 
 async function runFreshCrawl(): Promise<void> {
@@ -18,6 +18,7 @@ async function runFreshCrawl(): Promise<void> {
   await db.delete(crawlQueue);
   await db.delete(retryQueue);
   await db.delete(deadLetterQueue);
+  await db.delete(distributedLock);
   await db.delete(crawlerMetrics);
   await db.delete(scrapeLogs);
   console.info('[FreshCrawl] Database cleaned.');
@@ -26,6 +27,7 @@ async function runFreshCrawl(): Promise<void> {
   console.info('\n[FreshCrawl] Step 2: Initializing source intervals...');
   const { sourceIntervalService } = await import('../crawler/core/sourceIntervals');
   await sourceIntervalService.initializeDefaults();
+  await sourceIntervalService.updateConfig('manual', { enabled: false });
   console.info('[FreshCrawl] Source intervals initialized.');
 
   // Step 3: Run full crawl cycle

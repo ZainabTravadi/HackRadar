@@ -6,13 +6,18 @@ export function parseDoraHacksPayload(html: string): RawHackathon[] {
   const $ = cheerio.load(html);
   const items: RawHackathon[] = [];
   const seen = new Set<string>();
+  const rejectPatterns = [
+    /dorahacks\.io\/blog/i,
+    /dorahacks\.io\/guides?/i,
+    /dorahacks\.io\/news/i,
+  ];
 
   $('a[href]').each((_, element) => {
     const href = $(element).attr('href');
     const title = $(element).text().trim() || $(element).attr('aria-label') || '';
     const normalizedUrl = normalizeUrl(href);
 
-    if (!normalizedUrl || !looksLikeHackathon(title, normalizedUrl)) {
+    if (!normalizedUrl || rejectPatterns.some((pattern) => pattern.test(normalizedUrl)) || !looksLikeHackathon(title, normalizedUrl)) {
       return;
     }
 

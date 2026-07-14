@@ -65,6 +65,11 @@ function mapEventToRawHackathon(entry: unknown): RawHackathon[] {
   const registrationEnd = parseDate(item.registrationEnd);
   const submissionStart = parseDate(item.submissionStart);
   const submissionEnd = parseDate(item.submissionEnd);
+  const organizerName = String(
+    item.organisation && typeof item.organisation === 'object'
+      ? (item.organisation as Record<string, unknown>).name ?? ''
+      : item.organizer ?? item.organization ?? item.host ?? '',
+  ).trim();
 
   return [{
     title,
@@ -73,12 +78,13 @@ function mapEventToRawHackathon(entry: unknown): RawHackathon[] {
     sourceId: id,
     source: 'hack2skill',
     imageUrl: String(item.thumbnail ?? '').trim() || undefined,
+    organizerName: organizerName || undefined,
     registrationDeadline: registrationEnd,
     submissionDeadline: submissionEnd,
     startDate: registrationStart ?? submissionStart,
     endDate: submissionEnd ?? registrationEnd,
     locationText: [mode, participation].filter(Boolean).join(' ') || undefined,
-    rawData: { event: item },
+    rawData: { event: item, organizerName },
   }];
 }
 

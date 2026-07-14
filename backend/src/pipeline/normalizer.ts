@@ -1,4 +1,6 @@
 import type { NewHackathon } from '../db/schema';
+import { cleanHackathonDescription, cleanHackathonTitle, extractQualityHints, inferHackathonOrganizer } from './qualityCleanup';
+import { computeHackathonStatus } from './status';
 
 type Theme =
   | 'ai'
@@ -312,6 +314,8 @@ function stripHtml(value: string): string {
     .replace(/"/g, '"')
     .replace(/'/g, "'")
     .replace(/&apos;/g, "'")
+    .replace(/@media\b[^;{]*/gi, ' ')
+    .replace(/\b(?:display|position|margin|padding|width|height|font-size|font-weight|line-height|color|background(?:-color)?|gap|align-items|justify-content|border(?:-[a-z-]+)?|opacity|transform)\s*:\s*[^;]+;?/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -424,11 +428,11 @@ function buildMeaningfulDescription(
 // Converts source-specific raw data into a consistent database insert payload.
 export function normalize(raw: RawHackathon): NewHackathon {
   // Strip HTML tags and decode entities from all text fields
-  const cleanTitle = cleanTitleText(raw.title);
-  const cleanDescription = cleanDescriptionText(raw.description);
+  const cleanTitle = cleanHackathonTitle(raw.title, raw.rawData, raw.sourceUrl);
+  const cleanDescription = cleanHackathonDescription(raw.description, cleanTitle, raw.rawData);
   const cleanPrizeText = raw.prizeText ? stripHtml(raw.prizeText).trim() : '';
   const cleanLocationText = raw.locationText ? stripHtml(raw.locationText).trim() : '';
-  const cleanOrganizerName = raw.organizerName ? stripHtml(raw.organizerName).trim() : '';
+  const cleanOrganizerName = inferHackathonOrganizer(raw, cleanDescription, cleanLocationText);
 
   // Conservative list of core sources expected to exist in older DB enums.
   const CORE_SOURCES = [
@@ -455,18 +459,20 @@ export function normalize(raw: RawHackathon): NewHackathon {
   // Map less-critical/social sources to 'manual' to avoid DB enum insertion errors
   const safeSource = CORE_SOURCES.includes(raw.source) ? raw.source : 'manual';
 
-  const analysisText = [cleanTitle, cleanDescription, cleanLocationText, raw.sourceUrl ?? '', cleanOrganizerName]
+  const analysisText = [cleanTitle, cleanDescription, cleanLocationText, raw.sourceUrl ?? '', cleanOrganizerName, extractQualityHints(raw.rawData)]
     .filter(Boolean)
     .join(' ');
   const themes = classifyThemes(analysisText);
-  const mode = detectMode(analysisText);
+  const mode = raw.mode && raw.mode !== 'unknown'
+    ? raw.mode
+    : detectMode(analysisText);
   const status = calculateStatus(raw);
   const { prizePool, prizeType } = parsePrize(cleanPrizeText);
   const safeDescription = buildMeaningfulDescription(
     cleanTitle,
     cleanDescription,
     cleanLocationText,
-    cleanOrganizerName,
+    cleanOrganizerName ?? '',
     raw.participantCount,
     mode,
   );
@@ -503,31 +509,11 @@ export function normalize(raw: RawHackathon): NewHackathon {
 }
 
 function calculateStatus(raw: RawHackathon): NewHackathon['status'] {
-  const now = new Date();
-  const registrationDeadline = raw.registrationDeadline;
-  const submissionDeadline = raw.submissionDeadline;
-  const startDate = raw.startDate;
-  const endDate = raw.endDate;
-
-  if (registrationDeadline && registrationDeadline < now) {
-    if (submissionDeadline && submissionDeadline < now) {
-      return 'ended';
-    }
-    if (startDate && startDate <= now && (!endDate || endDate >= now)) {
-      return 'open';
-    }
-    return 'closing_soon';
-  }
-
-  if (startDate && startDate <= now && (!endDate || endDate >= now)) {
-    return 'open';
-  }
-
-  if (endDate && endDate < now) {
-    return 'ended';
-  }
-
-  return 'upcoming';
+  return computeHackathonStatus({
+    registrationDeadline: raw.registrationDeadline ?? null,
+    submissionDeadline: raw.submissionDeadline ?? null,
+    eventEndDate: raw.endDate ?? null,
+  });
 }
 
 function extractDollarAmounts(text: string): number[] {

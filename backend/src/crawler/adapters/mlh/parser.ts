@@ -61,7 +61,7 @@ export function parseMlhPayload(html: string): RawHackathon[] {
   const seen = new Set<string>();
 
   for (const match of matches) {
-    const url = match[0].replace(/[.,;)]+$/, '');
+    const url = canonicalizeMlhUrl(match[0].replace(/[.,;)]+$/, ''));
 
     if (!isValidMlhEventUrl(url) || seen.has(url)) {
       continue;
@@ -69,6 +69,7 @@ export function parseMlhPayload(html: string): RawHackathon[] {
 
     seen.add(url);
     const title = extractTitleFromUrl(url);
+    const organizerName = extractOrganizerFromHtml(html);
 
     items.push({
       title: title.length > 120 ? title.slice(0, 117) + '...' : title,
@@ -76,9 +77,32 @@ export function parseMlhPayload(html: string): RawHackathon[] {
       sourceUrl: url,
       sourceId: url,
       source: 'mlh',
-      rawData: { html: html.slice(0, 1200), url },
+      organizerName: organizerName || undefined,
+      rawData: { html: html.slice(0, 1200), url, organizerName },
     });
   }
 
   return items.slice(0, 25);
+}
+
+function canonicalizeMlhUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    parsed.search = '';
+    parsed.hostname = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function extractOrganizerFromHtml(html: string): string {
+  if (/Major League Hacking/i.test(html)) {
+    return 'Major League Hacking';
+  }
+
+  const organizerMatch = html.match(/(?:hosted by|organized by|organised by|presented by)\s+([^<]{2,80}?)(?=<|$)/i);
+  return organizerMatch?.[1]?.trim() ?? '';
 }

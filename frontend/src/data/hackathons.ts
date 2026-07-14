@@ -1,3 +1,4 @@
+import { computeHackathonStatus, resolveHackathonDeadline } from "../../../backend/src/pipeline/status";
 import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:3001";
@@ -11,9 +12,11 @@ export interface Hackathon {
   title: string;
   platform: Platform;
   description: string;
-  registrationDeadline: string;
-  submissionDeadline: string;
+  registrationDeadline: string | null;
+  submissionDeadline: string | null;
+  eventEndDate: string | null;
   mode: Mode;
+  status: Status;
   country?: string;
   prize?: string;
   tags: string[];
@@ -27,9 +30,11 @@ type ApiHackathon = {
   title: string;
   platform: string;
   description: string;
-  registrationDeadline: string;
-  submissionDeadline: string;
+  registrationDeadline: string | null;
+  submissionDeadline: string | null;
+  eventEndDate: string | null;
   mode: Mode;
+  status: "open" | "closing-soon" | "ended" | "upcoming";
   country?: string;
   prize?: string;
   tags: string[];
@@ -38,20 +43,49 @@ type ApiHackathon = {
   updatedHoursAgo: number;
 };
 
-export const getDaysUntil = (iso: string) => {
+type DeadlineFields = Pick<Hackathon, "registrationDeadline" | "submissionDeadline" | "eventEndDate">;
+
+export const getDaysUntil = (iso: string | null | undefined) => {
+  if (!iso) return null;
   const ms = new Date(iso).getTime() - Date.now();
+  if (Number.isNaN(ms)) return null;
   return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 };
 
-export const getStatus = (h: Hackathon): Status => {
-  const days = getDaysUntil(h.registrationDeadline);
-  if (days <= 0) return "Ended";
-  if (days <= 3) return "Closing Soon";
-  return "Open";
+export const getDeadlineInfo = (h: DeadlineFields) => {
+  const deadline = resolveHackathonDeadline({
+    registrationDeadline: h.registrationDeadline,
+    submissionDeadline: h.submissionDeadline,
+    eventEndDate: h.eventEndDate,
+  });
+  const status = computeDisplayStatus(h);
+
+  if (!deadline) {
+    return {
+      deadline: null as Date | null,
+      days: null as number | null,
+      status,
+      label: "Deadline TBA",
+    };
+  }
+
+  const days = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  return {
+    deadline,
+    days,
+    status,
+    label: status === "Ended" ? "Ended" : `Closes in ${days}d`,
+  };
 };
 
-export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+export const getStatus = (h: DeadlineFields): Status => getDeadlineInfo(h).status;
+
+export const formatDate = (iso: string | null | undefined) => {
+  if (!iso) return "Deadline TBA";
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return "Deadline TBA";
+  return value.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 
 export interface HackathonFilters {
   query: string;
@@ -97,7 +131,11 @@ export function filterHackathons(hackathons: Hackathon[], filters: HackathonFilt
   });
 
   if (filters.sort === "closing") {
-    list = list.sort((a, b) => getDaysUntil(a.registrationDeadline) - getDaysUntil(b.registrationDeadline));
+    list = list.sort((a, b) => {
+      const aDays = getDeadlineInfo(a).days ?? Number.POSITIVE_INFINITY;
+      const bDays = getDeadlineInfo(b).days ?? Number.POSITIVE_INFINITY;
+      return aDays - bDays;
+    });
   } else if (filters.sort === "newest") {
     list = list.sort((a, b) => a.updatedHoursAgo - b.updatedHoursAgo);
   }
@@ -116,7 +154,7 @@ async function fetchJson<T>(path: string): Promise<T> {
 
 export async function fetchHackathons(): Promise<Hackathon[]> {
   const rows = await fetchJson<ApiHackathon[]>("/api/hackathons");
-  return rows.map(toHackathon);
+  return rows.map(toHackathon).filter((row) => getStatus(row) !== "Ended");
 }
 
 export async function fetchHackathon(slug: string): Promise<Hackathon | null> {
@@ -142,6 +180,12 @@ export function useHackathon(slug?: string) {
 }
 
 function toHackathon(row: ApiHackathon): Hackathon {
+  const status = computeDisplayStatus({
+    registrationDeadline: row.registrationDeadline,
+    submissionDeadline: row.submissionDeadline,
+    eventEndDate: row.eventEndDate,
+  });
+
   return {
     slug: row.slug,
     title: row.title,
@@ -149,7 +193,9 @@ function toHackathon(row: ApiHackathon): Hackathon {
     description: row.description,
     registrationDeadline: row.registrationDeadline,
     submissionDeadline: row.submissionDeadline,
+    eventEndDate: row.eventEndDate,
     mode: row.mode,
+    status,
     country: row.country,
     prize: row.prize,
     tags: row.tags ?? [],
@@ -157,4 +203,16 @@ function toHackathon(row: ApiHackathon): Hackathon {
     url: row.url,
     updatedHoursAgo: row.updatedHoursAgo,
   };
+}
+
+function computeDisplayStatus(dates: DeadlineFields): Status {
+  const status = computeHackathonStatus({
+    registrationDeadline: dates.registrationDeadline,
+    submissionDeadline: dates.submissionDeadline,
+    eventEndDate: dates.eventEndDate,
+  });
+
+  if (status === "ended") return "Ended";
+  if (status === "closing_soon") return "Closing Soon";
+  return "Open";
 }

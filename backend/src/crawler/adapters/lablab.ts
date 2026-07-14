@@ -44,7 +44,7 @@ export class LablabAdapter extends BaseAdapter {
       const card = $(element);
       const href = card.attr('href')?.trim();
       const sourceUrl = normalizeUrl(href);
-      const title = card.find('h2').first().text().trim().replace(/\s+/g, ' ');
+      const title = extractTitle(card, sourceUrl);
       const description = card.find('p').first().text().trim().replace(/\s+/g, ' ');
       const imageUrl = card.find('img').first().attr('src')?.trim() || card.find('img').first().attr('srcset')?.split(' ').shift() || undefined;
       const startDate = parseDate(card.find('time').first().attr('datetime') ?? '');
@@ -133,4 +133,26 @@ function parseDate(value: string): Date | undefined {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function extractTitle(card: cheerio.Cheerio<any>, sourceUrl: string | null): string {
+  const candidates = [
+    card.attr('aria-label'),
+    card.attr('title'),
+    card.find('h1, h2, h3').first().text(),
+    sourceUrl ? new URL(sourceUrl).pathname.split('/').filter(Boolean).pop() : '',
+  ];
+
+  for (const candidate of candidates) {
+    const cleaned = (candidate ?? '').replace(/\s+/g, ' ').trim();
+    if (cleaned && !looksLikeCount(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  return sourceUrl ? new URL(sourceUrl).pathname.split('/').filter(Boolean).pop()?.replace(/[-_]+/g, ' ').trim() ?? 'lablab.ai event' : 'lablab.ai event';
+}
+
+function looksLikeCount(value: string): boolean {
+  return /^\d+(?:[.,]\d+)?$/.test(value) || /participant|participants|people|members/i.test(value);
 }

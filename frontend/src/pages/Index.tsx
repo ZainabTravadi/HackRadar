@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Bell, Filter, Zap, Github } from "lucide-react";
+import { ArrowRight, Bell, Filter, Zap } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { HackathonCard } from "@/components/HackathonCard";
-import { useHackathons } from "@/data/hackathons";
+import { getDeadlineInfo, useHackathons } from "@/data/hackathons";
 import { useMemo } from "react";
 
 const features = [
@@ -26,20 +26,20 @@ const features = [
 
 const Index = () => {
   const { data: hackathons = [], isLoading } = useHackathons();
-  const preview = useMemo(() => [...hackathons].sort((a, b) =>
-    new Date(a.registrationDeadline).getTime() - new Date(b.registrationDeadline).getTime()
-  ).slice(0, 3), [hackathons]);
+  const preview = useMemo(() => [...hackathons].sort((a, b) => {
+    const aDeadline = getDeadlineInfo(a).deadline?.getTime() ?? Number.POSITIVE_INFINITY;
+    const bDeadline = getDeadlineInfo(b).deadline?.getTime() ?? Number.POSITIVE_INFINITY;
+    return aDeadline - bDeadline;
+  }).slice(0, 3), [hackathons]);
   const platformList = useMemo(() => Array.from(new Set(hackathons.map((h) => h.platform))).sort(), [hackathons]);
-  const nextDeadlineDays = useMemo(() => {
-    if (!preview.length) return "—";
-    const first = preview[0];
-    const days = Math.ceil((new Date(first.registrationDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return Math.max(days, 0);
+  const nextDeadlineLabel = useMemo(() => {
+    if (!preview.length) return "TBA";
+    const label = getDeadlineInfo(preview[0]).label;
+    return label === "Deadline TBA" ? "TBA" : label.replace(/^Closes in\s+/, "");
   }, [preview]);
 
   return (
     <Layout>
-      {/* Hero */}
       <section className="relative overflow-hidden bg-hero-gradient">
         <div className="container relative py-24 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
@@ -70,10 +70,9 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Floating accent cards */}
           <div className="pointer-events-none absolute left-4 top-32 hidden rotate-[-8deg] rounded-2xl border border-border bg-card p-3 shadow-elevated lg:block">
             <div className="text-xs text-muted-foreground">Closing in</div>
-            <div className="text-2xl font-semibold text-destructive">{nextDeadlineDays}d</div>
+            <div className="text-2xl font-semibold text-destructive">{nextDeadlineLabel}</div>
           </div>
           <div className="pointer-events-none absolute right-6 top-48 hidden rotate-[6deg] rounded-2xl border border-border bg-card p-3 shadow-elevated lg:block">
             <div className="text-xs text-muted-foreground">Total prizes</div>
@@ -82,7 +81,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Trust */}
       <section className="border-y border-border/60 bg-background py-10">
         <div className="container">
           <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -98,7 +96,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="py-24">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
@@ -121,60 +118,9 @@ const Index = () => {
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Preview */}
-      <section className="bg-soft-gradient py-24">
-        <div className="container">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-                Closing soonest
-              </h2>
-              <p className="mt-2 text-muted-foreground">A live preview of the radar.</p>
-            </div>
-            <Button asChild variant="ghost" className="hidden md:inline-flex">
-              <Link to="/hackathons">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
-          </div>
-
-          {isLoading ? (
-            <div className="mt-10 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Loading live hackathons...
-            </div>
-          ) : (
-            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {preview.map((h) => <HackathonCard key={h.slug} h={h} />)}
-            </div>
-          )}
-
-          <div className="mt-10 text-center md:hidden">
-            <Button asChild variant="outline">
-              <Link to="/hackathons">View all hackathons</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24">
-        <div className="container">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-border bg-primary-gradient p-12 text-center shadow-elevated">
-            <h2 className="text-balance text-3xl font-semibold tracking-tight text-primary-foreground md:text-4xl">
-              Ship more. Miss fewer deadlines.
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-primary-foreground/80">
-              Free, open, and built by hackers for hackers.
-            </p>
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/hackathons">Explore Hackathons</Link>
-              </Button>
-              <Button asChild size="lg" variant="ghost" className="text-primary-foreground hover:bg-white/10 hover:text-primary-foreground">
-                <a href="https://github.com"><Github className="mr-1.5 h-4 w-4" /> Star on GitHub</a>
-              </Button>
-            </div>
+          <div className="mx-auto mt-16 grid max-w-6xl gap-5 lg:grid-cols-3">
+            {hackathons.slice(0, 6).map((h) => <HackathonCard key={h.slug} h={h} />)}
           </div>
         </div>
       </section>

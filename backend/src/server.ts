@@ -10,6 +10,7 @@ import { distributedLockService } from './crawler/core/distributedLock';
 import { sourceIntervalService } from './crawler/core/sourceIntervals';
 import { crawlQueueService } from './crawler/core/queueService';
 import { crawlerMetrics, cacheRefreshStatus } from './db/schema';
+import { computeHackathonStatus, resolveHackathonDeadline } from './pipeline/status';
 import { eq, desc, count, sql } from 'drizzle-orm';
 
 type ApiHackathon = {
@@ -17,9 +18,11 @@ type ApiHackathon = {
   title: string;
   platform: string;
   description: string;
-  registrationDeadline: string;
-  submissionDeadline: string;
+  registrationDeadline: string | null;
+  submissionDeadline: string | null;
+  eventEndDate: string | null;
   mode: string;
+  status: 'open' | 'closing-soon' | 'ended' | 'upcoming';
   country?: string;
   prize?: string;
   tags: string[];
@@ -33,16 +36,17 @@ const INTERNAL_SECRET = process.env.INTERNAL_SECRET || 'dev-secret-change-in-pro
 
 function toApiHackathon(row: DbHackathon): ApiHackathon {
   const updatedAt = row.updatedAt ?? row.scrapedAt ?? new Date();
-  const deadline = row.registrationDeadline ?? row.submissionDeadline ?? row.startDate ?? row.endDate ?? updatedAt;
 
   return {
     slug: row.slug,
     title: row.title,
     platform: toPlatformLabel(row.source),
     description: row.description?.trim() || row.title,
-    registrationDeadline: deadline.toISOString(),
-    submissionDeadline: (row.submissionDeadline ?? deadline).toISOString(),
+    registrationDeadline: row.registrationDeadline?.toISOString() ?? null,
+    submissionDeadline: row.submissionDeadline?.toISOString() ?? null,
+    eventEndDate: row.endDate?.toISOString() ?? null,
     mode: toModeLabel(row.mode),
+    status: getStatus(row),
     country: row.countryCode ?? undefined,
     prize: row.prizeDescription?.trim() || formatPrize(row.prizePool),
     tags: Array.isArray(row.themes) ? row.themes.filter(Boolean) : [],
@@ -75,12 +79,11 @@ function formatPrize(value: number | null): string | undefined {
 }
 
 function getStatus(row: DbHackathon): 'open' | 'closing-soon' | 'ended' | 'upcoming' {
-  const deadline = row.registrationDeadline ?? row.submissionDeadline ?? row.startDate ?? row.endDate;
-  if (!deadline) return 'upcoming';
-  const days = Math.ceil((deadline.getTime() - Date.now()) / 86_400_000);
-  if (days <= 0) return 'ended';
-  if (days <= 3) return 'closing-soon';
-  return 'open';
+  return computeHackathonStatus({
+    registrationDeadline: row.registrationDeadline,
+    submissionDeadline: row.submissionDeadline,
+    eventEndDate: row.endDate,
+  }).replace('_', '-') as 'open' | 'closing-soon' | 'ended' | 'upcoming';
 }
 
 function sendJson(res: ServerResponse, statusCode: number, body: unknown) {
@@ -249,10 +252,25 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === '/api/hackathons') {
     const rows = await getHackathons();
-    const filtered = applyFilters(rows, url.searchParams).filter((row) => getStatus(row) !== 'ended' || url.searchParams.get('status')?.toLowerCase() === 'ended');
+    const requestedStatus = url.searchParams.get('status')?.toLowerCase();
+    const filtered = applyFilters(rows, url.searchParams).filter((row) => {
+      const status = getStatus(row);
+      if (status === 'ended' && requestedStatus !== 'ended') {
+        return false;
+      }
+      return true;
+    });
     filtered.sort((a, b) => {
-      const aDeadline = a.registrationDeadline ?? a.submissionDeadline ?? a.startDate ?? a.endDate ?? a.updatedAt ?? a.scrapedAt;
-      const bDeadline = b.registrationDeadline ?? b.submissionDeadline ?? b.startDate ?? b.endDate ?? b.updatedAt ?? b.scrapedAt;
+      const aDeadline = resolveHackathonDeadline({
+        registrationDeadline: a.registrationDeadline,
+        submissionDeadline: a.submissionDeadline,
+        eventEndDate: a.endDate,
+      }) ?? a.updatedAt ?? a.scrapedAt;
+      const bDeadline = resolveHackathonDeadline({
+        registrationDeadline: b.registrationDeadline,
+        submissionDeadline: b.submissionDeadline,
+        eventEndDate: b.endDate,
+      }) ?? b.updatedAt ?? b.scrapedAt;
       return aDeadline.getTime() - bDeadline.getTime();
     });
     sendJson(res, 200, filtered.map(toApiHackathon));

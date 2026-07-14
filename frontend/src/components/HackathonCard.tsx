@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Trophy, ArrowUpRight } from "lucide-react";
-import { Hackathon, formatDate, getDaysUntil, getStatus } from "@/data/hackathons";
+import { Hackathon, formatDate, getDeadlineInfo, getStatus } from "@/data/hackathons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ const platformStyles: Record<string, string> = {
 };
 
 export const HackathonCard = ({ h }: { h: Hackathon }) => {
-  const days = getDaysUntil(h.registrationDeadline);
+  const deadline = getDeadlineInfo(h);
   const status = getStatus(h);
 
   return (
@@ -38,7 +38,7 @@ export const HackathonCard = ({ h }: { h: Hackathon }) => {
             status === "Ended" && "bg-muted text-muted-foreground"
           )}
         >
-          {status === "Ended" ? "Ended" : `Closes in ${days}d`}
+          {deadline.label}
         </span>
       </div>
 
@@ -50,7 +50,7 @@ export const HackathonCard = ({ h }: { h: Hackathon }) => {
       <div className="mb-5 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5" />
-          <span>{formatDate(h.registrationDeadline)}</span>
+          <span>{formatDate(h.registrationDeadline ?? h.submissionDeadline ?? h.eventEndDate)}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5" />

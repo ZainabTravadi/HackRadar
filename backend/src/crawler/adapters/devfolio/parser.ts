@@ -5,6 +5,8 @@ import type { RawHackathon } from '../../../pipeline/normalizer';
 const DEVFOLIO_EVENT_PATTERN = /devfolio\.co\/hackathons\/[a-z0-9-]+$/i;
 const DEVFOLIO_REJECT_PATTERNS = [
   /devfolio\.co\/hackathons\/?$/i,
+  /devfolio\.co\/hackathons\/applied/i,
+  /devfolio\.co\/hackathons\/apply/i,
   /devfolio\.co\/organize/i,
   /devfolio\.co\/explore/i,
   /devfolio\.co\/pricing/i,
@@ -38,6 +40,16 @@ function isValidDevfolioEventUrl(url: string): boolean {
     }
   }
   return true;
+}
+
+function extractOrganizer(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const match = normalized.match(/(?:hosted by|organized by|organised by|presented by|powered by|by)\s+([^•|:.-]{2,80}?)(?=$|[•|:.-]\s|,|\(|\)|\d{4}\b)/i);
+  return match?.[1]?.trim() ?? '';
 }
 
 function normalizeUrl(href: string | undefined): string | null {
@@ -80,6 +92,7 @@ export function parseDevfolioPayload(html: string): RawHackathon[] {
     const cleanTitle = title.length > 80 ? title.slice(0, 77) + '...' : title || 'Devfolio hackathon';
 
     const surroundingText = $(element).closest('li, div, article, section, p').text().trim();
+    const organizerText = extractOrganizer(surroundingText);
     const description = surroundingText && surroundingText.length > 12
       ? surroundingText.replace(/\s+/g, ' ').slice(0, 220)
       : `Devfolio event from ${normalizedUrl}`;
@@ -90,7 +103,8 @@ export function parseDevfolioPayload(html: string): RawHackathon[] {
       sourceUrl: normalizedUrl,
       sourceId: normalizedUrl,
       source: 'devfolio',
-      rawData: { html: html.slice(0, 1400), href: normalizedUrl },
+      organizerName: organizerText || undefined,
+      rawData: { html: html.slice(0, 1400), href: normalizedUrl, surroundingText, organizerText },
     });
   });
 

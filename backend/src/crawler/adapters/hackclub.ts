@@ -44,12 +44,13 @@ export class HackClubAdapter extends BaseAdapter {
       const href = card.attr('href')?.trim();
       const sourceUrl = normalizeUrl(href);
       const imageUrl = card.find('img').first().attr('src')?.trim() || undefined;
-      const mode = card.find('span[itemtype="VirtualLocation"]').first().text().trim();
+      const virtualLocation = card.find('span[itemtype="VirtualLocation"]').first().text().trim();
       const location = card.find('span[itemprop="address"]').first().parent().text().replace(/\s+/g, ' ').trim();
       const startDate = parseDate(card.find('span[itemprop="startDate"]').attr('content') ?? '');
       const endDate = parseDate(card.find('span[itemprop="endDate"]').attr('content') ?? '');
       const footerText = card.find('footer').text().trim();
-      const description = [title, mode || location, footerText].filter(Boolean).join(' • ').slice(0, 500);
+      const mode = inferMode(virtualLocation, location);
+      const description = [title, virtualLocation || location, footerText].filter(Boolean).join(' • ').slice(0, 500);
 
       if (!title || !sourceUrl || seen.has(sourceUrl)) {
         return;
@@ -66,10 +67,13 @@ export class HackClubAdapter extends BaseAdapter {
         startDate,
         endDate,
         locationText: location || undefined,
+        mode,
         rawData: {
           html: payload.slice(0, 3000),
           title,
           sourceUrl,
+          virtualLocation,
+          location,
         },
       });
     });
@@ -97,4 +101,20 @@ function parseDate(value: string): Date | undefined {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function inferMode(virtualLocation: string, location: string): 'online' | 'in_person' | 'hybrid' | 'unknown' {
+  if (virtualLocation && location) {
+    return 'hybrid';
+  }
+
+  if (virtualLocation) {
+    return 'online';
+  }
+
+  if (location) {
+    return 'in_person';
+  }
+
+  return 'unknown';
 }

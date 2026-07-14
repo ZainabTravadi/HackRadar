@@ -3,7 +3,7 @@ import { ArrowLeft, Calendar, Clock, ExternalLink, MapPin, Trophy, Users } from 
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, getDaysUntil, getStatus, useHackathon } from "@/data/hackathons";
+import { formatDate, getDeadlineInfo, getStatus, useHackathon } from "@/data/hackathons";
 
 const HackathonDetail = () => {
   const { slug } = useParams();
@@ -13,7 +13,7 @@ const HackathonDetail = () => {
     return (
       <Layout>
         <div className="container py-24 text-center">
-          <h1 className="text-2xl font-semibold">Loading hackathon…</h1>
+          <h1 className="text-2xl font-semibold">Loading hackathon...</h1>
         </div>
       </Layout>
     );
@@ -30,7 +30,7 @@ const HackathonDetail = () => {
     );
   }
 
-  const days = getDaysUntil(h.registrationDeadline);
+  const deadline = getDeadlineInfo(h);
   const status = getStatus(h);
 
   return (
@@ -50,7 +50,7 @@ const HackathonDetail = () => {
                 "bg-muted text-muted-foreground"
               }`}
             >
-              {status === "Ended" ? "Ended" : `Closes in ${days} days`}
+              {deadline.label === "Deadline TBA" ? "Deadline TBA" : deadline.label.replace("Closes in ", "Closes in ").replace(/d$/, " days")}
             </Badge>
           </div>
 
@@ -77,6 +77,7 @@ const HackathonDetail = () => {
           <div className="grid gap-5 md:grid-cols-2">
             <DetailCard icon={Calendar} label="Registration Deadline" value={formatDate(h.registrationDeadline)} highlight />
             <DetailCard icon={Calendar} label="Submission Deadline" value={formatDate(h.submissionDeadline)} />
+            <DetailCard icon={Calendar} label="Event End Date" value={formatDate(h.eventEndDate)} />
             <DetailCard icon={MapPin} label="Mode" value={h.mode + (h.country ? ` · ${h.country}` : "")} />
             {h.prize && <DetailCard icon={Trophy} label="Prize Pool" value={h.prize} />}
             <DetailCard icon={Users} label="Organizer" value={h.organizer} />
