@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
@@ -76,5 +77,8 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+  // require() is used by Tailwind plugin; disable eslint rule inline for this file
+  plugins: [tailwindcssAnimate],
+};
+
+export default config;

@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
-
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:3001";
+import SectionHeader from '@/components/ui/SectionHeader';
+import { getApiBaseUrl } from "@/lib/api";
 
 const endpoints = [
   {
@@ -23,7 +23,7 @@ const endpoints = [
   {
     method: "GET",
     path: "/api/hackathons?theme=ai",
-    desc: "Filter by theme. Supports: ai, web3, fintech, climate, gaming, hardware…",
+    desc: "Filter by theme. Supports: ai, web3, fintech, climate, gaming, hardware, and more.",
     sample: `[ { "slug": "global-ai-summit-2026", "tags": ["AI", "LLM"] } ]`,
   },
   {
@@ -44,32 +44,34 @@ const Api = () => (
   <Layout>
     <section className="bg-hero-gradient py-16">
       <div className="container max-w-3xl text-center">
-        <Badge variant="secondary" className="rounded-full">Public API · v1</Badge>
-        <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight md:text-5xl">
-          The hackathon <span className="font-serif-display italic text-primary">API</span>
-        </h1>
+        <Badge variant="secondary" className="rounded-full">
+          Public API · v1
+        </Badge>
+        <SectionHeader title={<>The hackathon <span className="font-serif-display italic text-primary">API</span></>} subtitle="Programmatic access to normalized event discovery data." />
         <p className="mt-3 text-muted-foreground">
           Free for developers. No auth required. Cached every 6 hours.
         </p>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 font-mono text-sm shadow-card">
           <span className="text-muted-foreground">Base URL</span>
-          <span className="font-medium text-foreground">{apiBaseUrl}</span>
+          <span className="font-medium text-foreground">{getApiBaseUrl()}</span>
         </div>
       </div>
     </section>
 
     <section className="py-16">
       <div className="container max-w-3xl space-y-6">
-        {endpoints.map((e) => (
-          <div key={e.path} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        {endpoints.map((endpoint) => (
+          <div key={endpoint.path} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <div className="flex items-center gap-3 border-b border-border bg-secondary/40 px-5 py-3">
-              <Badge className="rounded-md bg-success/15 font-mono text-success hover:bg-success/15">{e.method}</Badge>
-              <code className="font-mono text-sm font-medium text-foreground">{e.path}</code>
+              <Badge className={endpoint.method === 'GET' ? 'rounded-md bg-blue-600/10 text-blue-500 font-mono' : 'rounded-md bg-emerald-600/10 text-emerald-500 font-mono'}>
+                {endpoint.method}
+              </Badge>
+              <code className="font-mono text-sm font-medium text-foreground">{endpoint.path}</code>
             </div>
             <div className="p-5">
-              <p className="text-sm text-muted-foreground">{e.desc}</p>
+              <p className="text-sm text-muted-foreground">{endpoint.desc}</p>
               <pre className="mt-4 overflow-x-auto rounded-xl bg-foreground/[0.04] p-4 font-mono text-xs leading-relaxed text-foreground">
-{e.sample}
+{endpoint.sample}
               </pre>
             </div>
           </div>
@@ -77,7 +79,9 @@ const Api = () => (
 
         <div className="rounded-2xl border border-dashed border-border p-8 text-center">
           <h3 className="text-lg font-semibold">Need higher rate limits?</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Email <a className="text-primary underline" href="mailto:api@hackradar.dev">api@hackradar.dev</a></p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Email <a className="text-primary underline" href="mailto:api@hackradar.dev">api@hackradar.dev</a>
+          </p>
         </div>
       </div>
     </section>

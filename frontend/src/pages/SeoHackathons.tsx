@@ -1,7 +1,16 @@
 import { useParams } from "react-router-dom";
 import Hackathons from "./Hackathons";
 
-const presetMap: Record<string, any> = {
+type SeoPreset = {
+  presetTheme?: string;
+  presetTitle?: string;
+  presetSubtitle?: string;
+  presetMode?: string;
+  presetCountry?: string;
+  presetStatus?: string;
+};
+
+const presetMap: Record<string, SeoPreset> = {
   ai: { presetTheme: "AI", presetTitle: "AI Hackathons", presetSubtitle: "Every active AI hackathon, in one place." },
   web3: { presetTheme: "Web3", presetTitle: "Web3 Hackathons", presetSubtitle: "Crypto, Ethereum, and on-chain builds." },
   online: { presetMode: "Online", presetTitle: "Online Hackathons", presetSubtitle: "Build from anywhere — fully remote events." },

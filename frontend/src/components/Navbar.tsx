@@ -4,11 +4,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { to: "/hackathons", label: "Hackathons" },
-  { to: "/hackathons/closing-soon", label: "Closing Soon" },
-  { to: "/api", label: "API" },
-  { to: "/submit", label: "Submit" },
+const GITHUB_URL = "https://github.com/ZainabTravadi/List-Of-Hackathons";
+
+const community = [
+  { to: '/join', label: 'Join' },
+  { to: '/contributors', label: 'Contributors' },
+  { to: '/leaderboard', label: 'Leaderboard' },
+];
+
+const project = [
+  { to: '/about', label: 'About' },
+  { to: '/transparency', label: 'Transparency' },
+  { to: '/roadmap', label: 'Roadmap' },
+  { to: '/governance', label: 'Governance' },
+  { to: '/impact', label: 'Impact' },
+  { to: '/docs', label: 'Docs' },
 ];
 
 export const Navbar = () => {
@@ -26,27 +36,41 @@ export const Navbar = () => {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              className={({ isActive }) =>
-                cn(
-                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive || location.pathname.startsWith(l.to)
-                    ? "text-foreground bg-secondary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                )
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
+          <NavLink to="/hackathons" className={({ isActive }) => cn("rounded-md px-3 py-2 text-sm font-medium transition-colors", isActive || location.pathname.startsWith('/hackathons') ? 'text-foreground bg-secondary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60')}>
+            Discover
+          </NavLink>
+
+          <div className="group relative">
+            <details className="relative">
+              <summary className="list-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground hover:bg-secondary/60">Community</summary>
+              <div className="absolute left-0 mt-2 w-44 rounded-md border border-border bg-card p-2 shadow-card">
+                {community.map((c) => (
+                  <NavLink key={c.to} to={c.to} className={({ isActive }) => cn('block rounded px-2 py-2 text-sm', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground hover:text-foreground')}>
+                    {c.label}
+                  </NavLink>
+                ))}
+              </div>
+            </details>
+          </div>
+
+          <div className="group relative">
+            <details className="relative">
+              <summary className="list-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground hover:bg-secondary/60">Project</summary>
+              <div className="absolute left-0 mt-2 w-48 rounded-md border border-border bg-card p-2 shadow-card">
+                {project.map((p) => (
+                  <NavLink key={p.to} to={p.to} className={({ isActive }) => cn('block rounded px-2 py-2 text-sm', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground hover:text-foreground')}>
+                    {p.label}
+                  </NavLink>
+                ))}
+              </div>
+            </details>
+          </div>
         </nav>
 
-        <div className="hidden md:flex">
+        <div className="hidden md:flex items-center gap-3">
+          <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-foreground">GitHub</a>
           <Button asChild size="sm" className="bg-primary-gradient shadow-glow hover:opacity-95">
-            <Link to="/hackathons">Explore Hackathons</Link>
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer">View on GitHub</a>
           </Button>
         </div>
 
@@ -61,25 +85,35 @@ export const Navbar = () => {
 
       {open && (
         <div className="border-t border-border bg-background md:hidden">
-          <nav className="container flex flex-col gap-1 py-4">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    "rounded-md px-3 py-2 text-sm font-medium",
-                    isActive ? "text-foreground bg-secondary" : "text-muted-foreground"
-                  )
-                }
-              >
-                {l.label}
-              </NavLink>
-            ))}
-            <Button asChild size="sm" className="mt-2 bg-primary-gradient">
-              <Link to="/hackathons" onClick={() => setOpen(false)}>Explore Hackathons</Link>
-            </Button>
+          <nav className="container flex flex-col gap-4 py-4">
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">Discover</div>
+              <NavLink to="/hackathons" onClick={() => setOpen(false)} className={({ isActive }) => cn('block rounded-md px-3 py-2 text-sm font-medium', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground')}>Hackathons</NavLink>
+              <NavLink to="/organizers" onClick={() => setOpen(false)} className={({ isActive }) => cn('mt-2 block rounded-md px-3 py-2 text-sm font-medium', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground')}>Organizers</NavLink>
+            </div>
+
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">Community</div>
+              {community.map((c) => (
+                <NavLink key={c.to} to={c.to} onClick={() => setOpen(false)} className={({ isActive }) => cn('block rounded-md px-3 py-2 text-sm font-medium', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground')}>{c.label}</NavLink>
+              ))}
+            </div>
+
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">Project</div>
+              {project.map((p) => (
+                <NavLink key={p.to} to={p.to} onClick={() => setOpen(false)} className={({ isActive }) => cn('block rounded-md px-3 py-2 text-sm font-medium', isActive ? 'text-foreground bg-secondary' : 'text-muted-foreground')}>{p.label}</NavLink>
+              ))}
+            </div>
+
+            <div>
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-foreground">GitHub</a>
+              <div className="mt-2">
+                <Button asChild size="sm" className="bg-primary-gradient">
+                  <a href={GITHUB_URL} onClick={() => setOpen(false)} target="_blank" rel="noreferrer">View on GitHub</a>
+                </Button>
+              </div>
+            </div>
           </nav>
         </div>
       )}

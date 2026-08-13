@@ -12,6 +12,7 @@ import { crawlQueueService } from './crawler/core/queueService';
 import { crawlerMetrics, cacheRefreshStatus } from './db/schema';
 import { computeHackathonStatus, resolveHackathonDeadline } from './pipeline/status';
 import { eq, desc, count, sql } from 'drizzle-orm';
+import { InitiativeSubmissionError, submitInitiativeApplication } from './services/initiativeApplications';
 
 type ApiHackathon = {
   slug: string;
@@ -92,43 +93,117 @@ function sendJson(res: ServerResponse, statusCode: number, body: unknown) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
   });
+  if (statusCode === 204) {
+    res.end();
+    return;
+  }
+
   res.end(JSON.stringify(body));
 }
 
-function parseBody(req: IncomingMessage): Promise<any> {
+function parseBody(req: IncomingMessage, maxBytes = 32 * 1024): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    let bytesRead = 0;
+
+    req.on('data', (chunk) => {
+      bytesRead += Buffer.byteLength(chunk);
+      if (bytesRead > maxBytes) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+        return;
+      }
+
+      body += chunk;
+    });
+
     req.on('end', () => {
-      try { resolve(body ? JSON.parse(body) : {}); } catch { resolve({}); }
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch {
+        reject(new Error('Invalid JSON payload'));
+      }
     });
     req.on('error', reject);
   });
 }
 
+function getRequestIp(req: IncomingMessage): string {
+  const forwardedFor = req.headers['x-forwarded-for'];
+
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+    return forwardedFor[0].split(',')[0].trim();
+  }
+
+  return req.socket.remoteAddress || 'unknown';
+}
+
 async function getHackathons(): Promise<DbHackathon[]> {
   return db.select().from(hackathons);
 }
+// Server-side filter builder: builds a WHERE expression using parameterized values
+function buildWhereClause(params: URLSearchParams) {
+  const clauses: any[] = [];
+  const q = params.get('q') || params.get('search');
+  const mode = params.get('mode');
+  const status = params.get('status');
+  const country = params.get('country');
+  const theme = params.get('theme');
+  const platform = params.get('platform') || params.get('source');
 
-function applyFilters(rows: DbHackathon[], params: URLSearchParams): DbHackathon[] {
-  const mode = params.get('mode')?.toLowerCase();
-  const status = params.get('status')?.toLowerCase();
-  const country = params.get('country')?.toLowerCase();
-  const theme = params.get('theme')?.toLowerCase();
-  const platform = params.get('platform')?.toLowerCase();
+  if (mode && mode !== 'all') {
+    const m = mode.toLowerCase().replace(/[-\s]/g, '_');
+    const allowedModes = ['online', 'in_person', 'hybrid', 'unknown'];
+    if (!allowedModes.includes(m)) throw new Error(`Invalid mode parameter: ${mode}`);
+    clauses.push(sql`${hackathons.mode} = ${m}`);
+  }
 
-  return rows.filter((row) => {
-    if (mode && toModeLabel(row.mode).toLowerCase() !== mode) return false;
-    if (country) {
-      const rowCountry = (row.countryCode ?? row.location ?? '').toLowerCase();
-      if (!rowCountry.includes(country)) return false;
-    }
-    if (theme && !(row.themes ?? []).some((value) => value.toLowerCase() === theme)) return false;
-    if (platform && toPlatformLabel(row.source).toLowerCase() !== platform) return false;
-    if (status && getStatus(row) !== status) return false;
-    return true;
-  });
+  if (status && status !== 'all') {
+    // map display status to internal enum where needed
+    const sval = status.toLowerCase().trim();
+    const statusMap: Record<string, string> = {
+      open: 'open', 'opening': 'open', 'closing-soon': 'closing_soon', 'closing soon': 'closing_soon', 'closing_soon': 'closing_soon', ended: 'ended', upcoming: 'upcoming', 'not started': 'upcoming'
+    };
+    const s = statusMap[sval];
+    if (!s) throw new Error(`Invalid status parameter: ${status}`);
+    clauses.push(sql`${hackathons.status} = ${s}`);
+  }
+
+  if (country) {
+    const lowered = `%${country.toLowerCase()}%`;
+    clauses.push(sql`(LOWER(${hackathons.countryCode}) LIKE ${lowered} OR LOWER(${hackathons.location}) LIKE ${lowered})`);
+  }
+
+  if (platform) {
+    const p = platform.toLowerCase();
+    const allowed = [
+      'devpost','mlh','devfolio','unstop','dorahacks','taikai','hackerearth','hack2skill','reskilll','lablab','ethglobal','angelhack','hackclub','university','eventbrite','luma','meetup','github','reddit','discord','telegram','linkedin','twitter','facebook','google','manual'
+    ];
+    if (!allowed.includes(p)) throw new Error(`Invalid source/platform parameter: ${platform}`);
+    clauses.push(sql`${hackathons.source} = ${p}`);
+  }
+
+  if (theme) {
+    const t = theme.toLowerCase();
+    // match against joined themes string
+    clauses.push(sql`LOWER(array_to_string(${hackathons.themes}, ' ')) LIKE ${'%' + t + '%'}`);
+  }
+
+  if (q) {
+    const like = `%${q}%`;
+    clauses.push(sql`(${hackathons.title} ILIKE ${like} OR ${hackathons.description} ILIKE ${like} OR ${hackathons.organizerName} ILIKE ${like} OR array_to_string(${hackathons.themes}, ' ') ILIKE ${like})`);
+  }
+
+  if (clauses.length === 0) return null;
+  // combine clauses with AND
+  return clauses.reduce((acc, c) => (acc ? sql`${acc} AND ${c}` : c), null as any);
 }
 
 function checkInternalAuth(req: IncomingMessage): boolean {
@@ -245,36 +320,83 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method !== 'GET') {
+  // Allow POST for the initiative application endpoint; otherwise only GET is permitted
+  if (req.method !== 'GET' && !(url.pathname === '/api/initiative/applications' && req.method === 'POST')) {
     sendJson(res, 405, { error: 'Method not allowed' });
     return;
   }
 
   if (url.pathname === '/api/hackathons') {
-    const rows = await getHackathons();
-    const requestedStatus = url.searchParams.get('status')?.toLowerCase();
-    const filtered = applyFilters(rows, url.searchParams).filter((row) => {
-      const status = getStatus(row);
-      if (status === 'ended' && requestedStatus !== 'ended') {
-        return false;
+    // Build server-side filters when query parameters are present
+    let where;
+    try {
+      where = buildWhereClause(url.searchParams);
+    } catch (err) {
+      // Parameter validation failed
+      const message = err instanceof Error ? err.message : 'Invalid parameters';
+      sendJson(res, 400, { error: message });
+      return;
+    }
+    let rows: DbHackathon[];
+    if (where) {
+      // sorting: only allow predefined options
+      const sort = url.searchParams.get('sort') || 'closing';
+      const orderExpr = sql`COALESCE(${hackathons.registrationDeadline}, ${hackathons.submissionDeadline}, ${hackathons.endDate}, ${hackathons.updatedAt})`;
+      if (sort === 'closing') {
+        rows = await db.select().from(hackathons).where(where).orderBy(orderExpr);
+      } else if (sort === 'newest') {
+        rows = await db.select().from(hackathons).where(where).orderBy(sql`${hackathons.updatedAt} DESC`);
+      } else {
+        sendJson(res, 400, { error: `Invalid sort parameter: ${sort}` });
+        return;
       }
+    } else {
+      rows = await getHackathons();
+    }
+
+    // Maintain previous behavior: filter out ended unless explicitly requested
+    const requestedStatus = url.searchParams.get('status')?.toLowerCase();
+    const filtered = rows.filter((row) => {
+      const status = getStatus(row);
+      if (status === 'ended' && requestedStatus !== 'ended') return false;
       return true;
     });
-    filtered.sort((a, b) => {
-      const aDeadline = resolveHackathonDeadline({
-        registrationDeadline: a.registrationDeadline,
-        submissionDeadline: a.submissionDeadline,
-        eventEndDate: a.endDate,
-      }) ?? a.updatedAt ?? a.scrapedAt;
-      const bDeadline = resolveHackathonDeadline({
-        registrationDeadline: b.registrationDeadline,
-        submissionDeadline: b.submissionDeadline,
-        eventEndDate: b.endDate,
-      }) ?? b.updatedAt ?? b.scrapedAt;
-      return aDeadline.getTime() - bDeadline.getTime();
-    });
+
     sendJson(res, 200, filtered.map(toApiHackathon));
     return;
+  }
+
+  if (url.pathname === '/api/initiative/applications' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const result = await submitInitiativeApplication(body, getRequestIp(req));
+      sendJson(res, 201, {
+        success: true,
+        applicationId: result.application.id,
+        emailSent: result.emailSent,
+        message: 'Your application was received successfully.',
+      });
+      return;
+    } catch (err) {
+      if (err instanceof InitiativeSubmissionError) {
+        sendJson(res, err.statusCode, { success: false, error: err.message });
+        return;
+      }
+
+      if (err instanceof Error && err.message === 'Invalid JSON payload') {
+        sendJson(res, 400, { success: false, error: err.message });
+        return;
+      }
+
+      if (err instanceof Error && err.message === 'Request body too large') {
+        sendJson(res, 413, { success: false, error: err.message });
+        return;
+      }
+
+      console.error('[Initiative] Unexpected submission error:', err);
+      sendJson(res, 500, { success: false, error: 'Your application could not be saved. Please try again.' });
+      return;
+    }
   }
 
   const match = url.pathname.match(/^\/api\/hackathons\/([^/]+)$/);

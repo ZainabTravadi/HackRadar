@@ -281,3 +281,27 @@ export const cacheRefreshStatus = pgTable('cache_refresh_status', {
 export type Hackathon = typeof hackathons.$inferSelect;
 export type NewHackathon = typeof hackathons.$inferInsert;
 export type ScrapeLog = typeof scrapeLogs.$inferSelect;
+
+// Initiative applications table (Phase 3)
+export const initiativeApplications = pgTable('initiative_applications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  githubUsername: text('github_username'),
+  linkedinUrl: text('linkedin_url'),
+  websiteUrl: text('website_url'),
+  interests: text('interests').array().notNull().default(sql`'{}'::text[]`),
+  contributionAreas: text('contribution_areas').array().notNull().default(sql`'{}'::text[]`),
+  experienceLevel: text('experience_level'),
+  availability: text('availability'),
+  contributionTypes: text('contribution_types').array().notNull().default(sql`'{}'::text[]`),
+  motivation: text('motivation'),
+  status: text('status').notNull().default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  createdAtIdx: index('initiative_applications_created_at_idx').on(t.createdAt),
+}));
+
+export type InitiativeApplication = typeof initiativeApplications.$inferSelect;
+export type NewInitiativeApplication = typeof initiativeApplications.$inferInsert;

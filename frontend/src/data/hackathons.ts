@@ -1,7 +1,7 @@
-import { computeHackathonStatus, resolveHackathonDeadline } from "../../../backend/src/pipeline/status";
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:3001";
+import { apiFetchJson } from "@/lib/api";
+import { computeHackathonStatus, resolveHackathonDeadline } from "@/lib/hackathonStatus";
 
 export type Platform = string;
 export type Mode = "Online" | "In-person" | "Hybrid" | "Unknown";
@@ -143,29 +143,31 @@ export function filterHackathons(hackathons: Hackathon[], filters: HackathonFilt
   return list;
 }
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+export async function fetchHackathons(filters?: Partial<HackathonFilters>): Promise<Hackathon[]> {
+  const qs = new URLSearchParams();
+  if (filters) {
+    if (filters.query) qs.set("q", filters.query);
+    if (filters.mode && filters.mode !== "all") qs.set("mode", filters.mode);
+    if (filters.theme && filters.theme !== "all") qs.set("theme", filters.theme);
+    if (filters.status && filters.status !== "all") qs.set("status", filters.status);
+    if (filters.country && filters.country !== "all") qs.set("country", filters.country);
+    if (filters.sort) qs.set("sort", filters.sort);
   }
 
-  return response.json() as Promise<T>;
-}
-
-export async function fetchHackathons(): Promise<Hackathon[]> {
-  const rows = await fetchJson<ApiHackathon[]>("/api/hackathons");
-  return rows.map(toHackathon).filter((row) => getStatus(row) !== "Ended");
+  const path = `/api/hackathons${qs.toString() ? `?${qs.toString()}` : ""}`;
+  const rows = await apiFetchJson<ApiHackathon[]>(path);
+  return rows.map(toHackathon);
 }
 
 export async function fetchHackathon(slug: string): Promise<Hackathon | null> {
-  const row = await fetchJson<ApiHackathon>(`/api/hackathons/${encodeURIComponent(slug)}`);
+  const row = await apiFetchJson<ApiHackathon>(`/api/hackathons/${encodeURIComponent(slug)}`);
   return row ? toHackathon(row) : null;
 }
 
-export function useHackathons() {
+export function useHackathons(filters?: Partial<HackathonFilters>) {
   return useQuery({
-    queryKey: ["hackathons"],
-    queryFn: fetchHackathons,
+    queryKey: ["hackathons", filters ?? {}],
+    queryFn: () => fetchHackathons(filters),
     staleTime: 60_000,
   });
 }

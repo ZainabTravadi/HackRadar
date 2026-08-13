@@ -10,7 +10,8 @@ if (!databaseUrl) {
 
 export default defineConfig({
   schema: './src/db/schema.ts',
-  out: './src/db/migrations',
+  // migrations are stored in backend/db/migrations
+  out: './db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url: databaseUrl,

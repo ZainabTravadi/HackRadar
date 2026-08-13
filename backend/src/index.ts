@@ -7,16 +7,16 @@ import { updateStatuses } from './pipeline/statusUpdater';
 
 // Application entry point for the reusable crawler framework.
 async function main(): Promise<void> {
+  console.info('HackRadar backend starting...');
+
   try {
-    console.info('HackRadar backend starting...');
     const scheduler = createDefaultScheduler();
     await scheduler.runAll();
     await updateStatuses();
     await validateData();
     console.info('Crawler run complete.');
   } catch (error: unknown) {
-    console.error('Fatal error:', error);
-    process.exit(1);
+    console.error('[Bootstrap] Non-fatal startup task failed:', error);
   }
 }
 
