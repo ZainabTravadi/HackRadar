@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/detective.png" width="380" alt="Hackradar Logo">
+  <img src="assets/detective.png" width="300" alt="Hackradar Logo">
 </p>
 
 <h1 align="center">HackRadar</h1>
