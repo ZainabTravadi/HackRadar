@@ -1,7 +1,17 @@
-# 🔵 HackRadar
+<p align="center">
+  <img src="assets/detective.png" width="380" alt="RateGuard Logo">
+</p>
 
-Open-source hackathon discovery and contributor recognition in one place.
+<h1 align="center">HackRadar</h1>
 
+<p align="center">
+  <strong>It finds the hackathons you didn't know existed.</strong>
+</p>
+
+<p align="center">
+  <strong>A global discovery engine for hackathons.</strong><br />
+  HackRadar aggregates hackathons from across the web into one searchable platform, helping builders discover opportunities by deadline, theme, format, and more.
+</p>
 > HackRadar helps builders discover hackathons faster, keeps the original source front and center, and gives the community a clear place to contribute.
 
 **Quick links**
