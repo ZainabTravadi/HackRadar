@@ -167,7 +167,7 @@ npm ci
 npm run dev
 ```
 
-The backend requires PostgreSQL and these environment variables at minimum:
+The backend requires PostgreSQL and these environment variables for production use:
 
 - `DATABASE_URL`
 - `SMTP_HOST`
@@ -176,7 +176,28 @@ The backend requires PostgreSQL and these environment variables at minimum:
 - `SMTP_PASS`
 - `RECEIVE_EMAIL`
 
-Optional backend settings include `SMTP_FROM`, `SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_TIMEOUT_MS`, `API_PORT`, `GITHUB_TOKEN`, and `GITHUB_REPOSITORY`.
+Optional backend settings include `SMTP_FROM`, `SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_TIMEOUT_MS`, `API_PORT`, `GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_REPOSITORY`, `FRONTEND_URL`, `HACKRADAR_INTERNAL_SECRET`, `RUN_STARTUP_TASKS`, `LOCAL_SCHEDULER`, `ENABLE_DISCOVERY`, `ENABLE_INCREMENTAL`, `LOCK_TTL_MS`, and `MAX_CONCURRENT_SOURCES`.
+
+## Deployment Readiness
+
+HackRadar stays a monorepo, but it is now ready to be copied into two separate deployment repositories later:
+
+- `backend/` for Heroku.
+- `frontend/` for Vercel.
+
+The current repository remains the source of truth for CI, contributor automation, Fellowship workflows, and shared documentation.
+
+### Production relationship
+
+- The frontend reads its API origin from `VITE_API_BASE_URL`.
+- The backend allows browser requests from `FRONTEND_URL`.
+- The backend exposes `GET /health` for readiness checks.
+- The backend `npm start` command launches the web server only; crawler bootstrap tasks stay opt-in.
+
+### Manual deployment notes
+
+- Heroku does not need a Procfile for this repo unless you prefer one.
+- Vercel uses the included `frontend/vercel.json` rewrite so deep links work on refresh.
 
 ## 🔷 Contributing
 

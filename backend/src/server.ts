@@ -5,7 +5,6 @@ import { URL } from 'node:url';
 
 import { db } from './db';
 import { hackathons, type Hackathon as DbHackathon } from './db/schema';
-import { productionScheduler } from './crawler/core/productionScheduler';
 import { distributedLockService } from './crawler/core/distributedLock';
 import { sourceIntervalService } from './crawler/core/sourceIntervals';
 import { crawlQueueService } from './crawler/core/queueService';
@@ -39,8 +38,10 @@ type ApiHackathon = {
   updatedHoursAgo: number;
 };
 
-const PORT = Number(process.env.API_PORT ?? process.env.PORT ?? 3001);
-const INTERNAL_SECRET = process.env.INTERNAL_SECRET || 'dev-secret-change-in-production';
+const PORT = Number(process.env.PORT || 3001);
+const HOST = '0.0.0.0';
+const FRONTEND_URL = process.env.FRONTEND_URL?.trim().replace(/\/$/, '');
+const INTERNAL_SECRET = process.env.HACKRADAR_INTERNAL_SECRET || process.env.INTERNAL_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-change-in-production');
 
 function toApiHackathon(row: DbHackathon): ApiHackathon {
   const updatedAt = row.updatedAt ?? row.scrapedAt ?? new Date();
@@ -94,14 +95,40 @@ function getStatus(row: DbHackathon): 'open' | 'closing-soon' | 'ended' | 'upcom
   }).replace('_', '-') as 'open' | 'closing-soon' | 'ended' | 'upcoming';
 }
 
-function sendJson(res: ServerResponse, statusCode: number, body: unknown) {
-  res.writeHead(statusCode, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
+function isLocalOrigin(origin: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^https?:\/\/\[::1\](?::\d+)?$/.test(origin);
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) {
+    return false;
+  }
+
+  if (FRONTEND_URL && origin === FRONTEND_URL) {
+    return true;
+  }
+
+  return isLocalOrigin(origin);
+}
+
+function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : null;
+
+  return {
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+function sendJson(res: ServerResponse, statusCode: number, body: unknown, origin?: string | null) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
+    ...getCorsHeaders(origin),
   });
   if (statusCode === 204) {
     res.end();
@@ -154,6 +181,11 @@ function getRequestIp(req: IncomingMessage): string {
 
 async function getHackathons(): Promise<DbHackathon[]> {
   return db.select().from(hackathons);
+}
+
+async function getProductionScheduler() {
+  const { productionScheduler } = await import('./crawler/core/productionScheduler');
+  return productionScheduler;
 }
 // Server-side filter builder: builds a WHERE expression using parameterized values
 function buildWhereClause(params: URLSearchParams) {
@@ -214,24 +246,35 @@ function buildWhereClause(params: URLSearchParams) {
 }
 
 function checkInternalAuth(req: IncomingMessage): boolean {
+  if (!INTERNAL_SECRET) {
+    return false;
+  }
+
   const auth = req.headers.authorization || '';
   return auth === `Bearer ${INTERNAL_SECRET}` || auth === INTERNAL_SECRET;
 }
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
 
   if (req.method === 'OPTIONS') {
-    sendJson(res, 204, {});
+    if (origin && !isAllowedOrigin(origin)) {
+      sendJson(res, 403, { error: 'Origin not allowed' }, origin);
+      return;
+    }
+
+    sendJson(res, 204, {}, origin);
     return;
   }
 
   if (url.pathname === '/internal/crawl' && req.method === 'POST') {
     if (!checkInternalAuth(req)) {
-      sendJson(res, 401, { error: 'Unauthorized' });
+      sendJson(res, 401, { error: 'Unauthorized' }, origin);
       return;
     }
     try {
+      const productionScheduler = await getProductionScheduler();
       const results = await productionScheduler.runFullCycle();
       const summary = {
         success: results.filter(r => r.success).length,
@@ -240,57 +283,58 @@ const server = createServer(async (req, res) => {
         totalSources: results.length,
         timestamp: new Date().toISOString(),
       };
-      sendJson(res, 200, { success: true, summary, results });
+      sendJson(res, 200, { success: true, summary, results }, origin);
     } catch (error) {
       console.error('[Internal Crawl] Error:', error);
-      sendJson(res, 500, { success: false, error: error instanceof Error ? error.message : String(error) });
+      sendJson(res, 500, { success: false, error: 'Internal crawl failed.' }, origin);
     }
     return;
   }
 
   if (url.pathname === '/internal/lock/status' && req.method === 'GET') {
-    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }); return; }
+    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }, origin); return; }
     const status = await distributedLockService.isLocked('scheduler_run', 'scheduler');
-    sendJson(res, 200, status);
+    sendJson(res, 200, status, origin);
     return;
   }
 
   if (url.pathname === '/internal/lock/release' && req.method === 'POST') {
-    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }); return; }
+    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }, origin); return; }
     await distributedLockService.forceRelease('scheduler_run', 'scheduler');
-    sendJson(res, 200, { released: true });
+    sendJson(res, 200, { released: true }, origin);
     return;
   }
 
   if (url.pathname === '/internal/intervals' && req.method === 'GET') {
-    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }); return; }
+    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }, origin); return; }
     const intervals = await sourceIntervalService.getAllConfigs();
-    sendJson(res, 200, intervals);
+    sendJson(res, 200, intervals, origin);
     return;
   }
 
   if (url.pathname === '/internal/queue/stats' && req.method === 'GET') {
-    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }); return; }
+    if (!checkInternalAuth(req)) { sendJson(res, 401, { error: 'Unauthorized' }, origin); return; }
     const stats = await crawlQueueService.getQueueStats();
-    sendJson(res, 200, stats);
+    sendJson(res, 200, stats, origin);
     return;
   }
 
   if (url.pathname === '/health' && req.method === 'GET') {
-    sendJson(res, 200, { status: 'healthy', timestamp: new Date().toISOString(), uptime: process.uptime() });
+    sendJson(res, 200, { status: 'healthy', timestamp: new Date().toISOString(), uptime: process.uptime() }, origin);
     return;
   }
 
   if (url.pathname === '/crawler/status' && req.method === 'GET') {
+    const productionScheduler = await getProductionScheduler();
     const health = await productionScheduler.getHealthStatus();
-    sendJson(res, 200, health);
+    sendJson(res, 200, health, origin);
     return;
   }
 
   if (url.pathname === '/crawler/history' && req.method === 'GET') {
     const limit = Number(url.searchParams.get('limit') || '100');
     const metrics = await db.select().from(crawlerMetrics).orderBy(desc(crawlerMetrics.startedAt)).limit(limit);
-    sendJson(res, 200, metrics);
+    sendJson(res, 200, metrics, origin);
     return;
   }
 
@@ -309,7 +353,7 @@ const server = createServer(async (req, res) => {
       return acc;
     }, {} as Record<string, any>);
     
-    sendJson(res, 200, { periodHours: hours, sources: aggregated, raw: metrics });
+    sendJson(res, 200, { periodHours: hours, sources: aggregated, raw: metrics }, origin);
     return;
   }
 
@@ -317,13 +361,13 @@ const server = createServer(async (req, res) => {
     const stats = await crawlQueueService.getQueueStats();
     const pending = await crawlQueueService.getDueJobs(50);
     const retry = await db.select().from(crawlerMetrics).where(eq(crawlerMetrics.crawlType, 'retry')).orderBy(desc(crawlerMetrics.startedAt)).limit(50);
-    sendJson(res, 200, { stats, pending, retry });
+    sendJson(res, 200, { stats, pending, retry }, origin);
     return;
   }
 
   if (url.pathname === '/crawler/cache' && req.method === 'GET') {
     const cache = await db.select().from(cacheRefreshStatus);
-    sendJson(res, 200, cache);
+    sendJson(res, 200, cache, origin);
     return;
   }
 
@@ -333,7 +377,7 @@ const server = createServer(async (req, res) => {
     !(url.pathname === '/api/initiative/applications' && req.method === 'POST') &&
     !(url.pathname === '/internal/fellowship/contributions' && req.method === 'POST')
   ) {
-    sendJson(res, 405, { error: 'Method not allowed' });
+    sendJson(res, 405, { error: 'Method not allowed' }, origin);
     return;
   }
 
@@ -342,7 +386,7 @@ const server = createServer(async (req, res) => {
     sendJson(res, 200, {
       updatedAt: new Date().toISOString(),
       contributors,
-    });
+    }, origin);
     return;
   }
 
@@ -351,7 +395,7 @@ const server = createServer(async (req, res) => {
     sendJson(res, 200, {
       updatedAt: new Date().toISOString(),
       leaderboard,
-    });
+    }, origin);
     return;
   }
 
@@ -360,16 +404,16 @@ const server = createServer(async (req, res) => {
     const username = decodeURIComponent(fellowshipContributorMatch[1]);
     const contributor = await getFellowshipContributor(username);
     if (!contributor) {
-      sendJson(res, 404, { error: 'Contributor not found' });
+      sendJson(res, 404, { error: 'Contributor not found' }, origin);
       return;
     }
-    sendJson(res, 200, { contributor, updatedAt: new Date().toISOString() });
+    sendJson(res, 200, { contributor, updatedAt: new Date().toISOString() }, origin);
     return;
   }
 
   if (url.pathname === '/internal/fellowship/contributions' && req.method === 'POST') {
     if (!checkInternalAuth(req)) {
-      sendJson(res, 401, { error: 'Unauthorized' });
+      sendJson(res, 401, { error: 'Unauthorized' }, origin);
       return;
     }
 
@@ -381,19 +425,19 @@ const server = createServer(async (req, res) => {
         duplicate: result.duplicate,
         ...(result.recorded ? { contribution: result.contribution } : {}),
         ...(result.recorded || result.duplicate ? {} : { reason: result.reason }),
-      });
+      }, origin);
       return;
     } catch (error) {
       if (error instanceof Error && error.message === 'Invalid JSON payload') {
-        sendJson(res, 400, { success: false, error: error.message });
+        sendJson(res, 400, { success: false, error: error.message }, origin);
         return;
       }
       if (error instanceof Error && error.message === 'Request body too large') {
-        sendJson(res, 413, { success: false, error: error.message });
+        sendJson(res, 413, { success: false, error: error.message }, origin);
         return;
       }
       console.error('[Fellowship] Contribution record failed:', error);
-      sendJson(res, 500, { success: false, error: 'Unable to record contribution.' });
+      sendJson(res, 500, { success: false, error: 'Unable to record contribution.' }, origin);
       return;
     }
   }
@@ -406,7 +450,7 @@ const server = createServer(async (req, res) => {
     } catch (err) {
       // Parameter validation failed
       const message = err instanceof Error ? err.message : 'Invalid parameters';
-      sendJson(res, 400, { error: message });
+      sendJson(res, 400, { error: message }, origin);
       return;
     }
     let rows: DbHackathon[];
@@ -419,7 +463,7 @@ const server = createServer(async (req, res) => {
       } else if (sort === 'newest') {
         rows = await db.select().from(hackathons).where(where).orderBy(sql`${hackathons.updatedAt} DESC`);
       } else {
-        sendJson(res, 400, { error: `Invalid sort parameter: ${sort}` });
+        sendJson(res, 400, { error: `Invalid sort parameter: ${sort}` }, origin);
         return;
       }
     } else {
@@ -434,7 +478,7 @@ const server = createServer(async (req, res) => {
       return true;
     });
 
-    sendJson(res, 200, filtered.map(toApiHackathon));
+    sendJson(res, 200, filtered.map(toApiHackathon), origin);
     return;
   }
 
@@ -447,26 +491,26 @@ const server = createServer(async (req, res) => {
         applicationId: result.application.id,
         emailSent: result.emailSent,
         message: 'Your application was received successfully.',
-      });
+      }, origin);
       return;
     } catch (err) {
       if (err instanceof InitiativeSubmissionError) {
-        sendJson(res, err.statusCode, { success: false, error: err.message });
+        sendJson(res, err.statusCode, { success: false, error: err.message }, origin);
         return;
       }
 
       if (err instanceof Error && err.message === 'Invalid JSON payload') {
-        sendJson(res, 400, { success: false, error: err.message });
+        sendJson(res, 400, { success: false, error: err.message }, origin);
         return;
       }
 
       if (err instanceof Error && err.message === 'Request body too large') {
-        sendJson(res, 413, { success: false, error: err.message });
+        sendJson(res, 413, { success: false, error: err.message }, origin);
         return;
       }
 
       console.error('[Initiative] Unexpected submission error:', err);
-      sendJson(res, 500, { success: false, error: 'Your application could not be saved. Please try again.' });
+      sendJson(res, 500, { success: false, error: 'Your application could not be saved. Please try again.' }, origin);
       return;
     }
   }
@@ -476,26 +520,31 @@ const server = createServer(async (req, res) => {
     const slug = decodeURIComponent(match[1]);
     const rows = await getHackathons();
     const row = rows.find((item) => item.slug === slug);
-    if (!row) { sendJson(res, 404, { error: 'Not found' }); return; }
-    sendJson(res, 200, toApiHackathon(row));
+    if (!row) { sendJson(res, 404, { error: 'Not found' }, origin); return; }
+    sendJson(res, 200, toApiHackathon(row), origin);
     return;
   }
 
-  sendJson(res, 404, { error: 'Not found' });
+  sendJson(res, 404, { error: 'Not found' }, origin);
 });
 
-server.listen(PORT, () => {
-  console.info(`HackRadar API listening on http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.info(`HackRadar API listening on http://${HOST}:${PORT}`);
   console.info(`Internal endpoints available at /internal/* (requires INTERNAL_SECRET)`);
   console.info(`Health endpoints: /health, /crawler/status, /crawler/history, /crawler/metrics, /crawler/queue, /crawler/cache`);
 });
 
 let localSchedulerInterval: NodeJS.Timeout | null = null;
-if (process.env.LOCAL_SCHEDULER === 'true') {
+if (process.env.LOCAL_SCHEDULER === 'true' && process.env.NODE_ENV !== 'production') {
   const intervalMs = Number(process.env.SCHEDULER_INTERVAL_MS) || 300000;
   console.info(`[Local Scheduler] Starting with interval ${intervalMs}ms`);
   localSchedulerInterval = setInterval(async () => {
-    try { await productionScheduler.runFullCycle(); } catch (e) { console.error('[Local Scheduler] Error:', e); }
+    try {
+      const productionScheduler = await getProductionScheduler();
+      await productionScheduler.runFullCycle();
+    } catch (e) {
+      console.error('[Local Scheduler] Error:', e);
+    }
   }, intervalMs);
 }
 
@@ -503,5 +552,5 @@ process.on('SIGTERM', async () => {
   console.info('SIGTERM received, shutting down...');
   if (localSchedulerInterval) clearInterval(localSchedulerInterval);
   await distributedLockService.forceRelease('scheduler_run', 'scheduler');
-  process.exit(0);
+  server.close(() => process.exit(0));
 });

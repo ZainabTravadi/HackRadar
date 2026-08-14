@@ -9,6 +9,11 @@ import { updateStatuses } from './pipeline/statusUpdater';
 async function main(): Promise<void> {
   console.info('HackRadar backend starting...');
 
+  if (process.env.RUN_STARTUP_TASKS !== 'true') {
+    console.info('Startup crawler tasks are disabled. Set RUN_STARTUP_TASKS=true to run the one-off bootstrap cycle.');
+    return;
+  }
+
   try {
     const scheduler = createDefaultScheduler();
     await scheduler.runAll();

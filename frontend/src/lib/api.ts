@@ -12,11 +12,7 @@ export function getApiBaseUrl(): string {
     return DEFAULT_LOCAL_API_BASE;
   }
 
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, '');
-  }
-
-  return DEFAULT_LOCAL_API_BASE;
+  throw new Error('VITE_API_BASE_URL is required in production.');
 }
 
 function normalizePath(path: string): string {

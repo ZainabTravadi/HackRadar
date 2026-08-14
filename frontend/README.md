@@ -28,8 +28,35 @@ npm run build
 
 ## Environment
 
-- `VITE_API_BASE_URL` points the app at the backend API.
-- If it is not set, the app defaults to `http://localhost:3001` during development.
+- `VITE_API_BASE_URL` points the app at the backend API in production.
+- If it is not set, the app falls back to `http://localhost:3001` during local development only.
+
+## Production deployment
+
+- Build with `npm run build`.
+- Deploy the generated `dist/` directory to Vercel.
+- The repo includes `frontend/vercel.json` so direct opens of routes like `/hackathons` and `/join` resolve to the SPA entrypoint.
+- Set `VITE_API_BASE_URL` in the Vercel environment settings before promoting a production deployment.
+
+## Copy into a future `HackRadar-Frontend` repo
+
+- `frontend/src/`
+- `frontend/public/`
+- `frontend/index.html`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `frontend/tsconfig.json`
+- `frontend/tsconfig.app.json`
+- `frontend/tsconfig.node.json`
+- `frontend/vite.config.ts`
+- `frontend/tailwind.config.ts`
+- `frontend/postcss.config.js`
+- `frontend/eslint.config.js`
+- `frontend/components.json`
+- `frontend/vitest.config.cjs`
+- `frontend/vercel.json`
+- `frontend/README.md`
+- `frontend/.env.example`
 
 ## Contributor notes
 
