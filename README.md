@@ -1,77 +1,110 @@
-# HackRadar
+# 🔵 HackRadar
 
-HackRadar is an open-source hackathon discovery platform that collects public listings, normalizes them, deduplicates them, and serves them through a searchable web app and API.
+Open-source hackathon discovery and contributor recognition in one place.
 
-## What HackRadar does
+> HackRadar helps builders discover hackathons faster, keeps the original source front and center, and gives the community a clear place to contribute.
 
-- Finds hackathons and related events from public sources.
-- Normalizes source-specific data into a shared model.
-- Deduplicates repeated listings.
-- Serves the results through a React frontend and a Node.js backend.
-- Keeps contributor and maintainer workflows visible and documented.
+**Quick links**
 
-## Why it exists
+| Explore | Contribute | Community |
+| --- | --- | --- |
+| [Hackathons](./frontend/src/pages/Hackathons.tsx) | [Join](./frontend/src/pages/Join.tsx) | [Contributors](./frontend/src/pages/Contributors.tsx) |
+| [Leaderboard](./frontend/src/pages/Leaderboard.tsx) | [Docs](./frontend/src/pages/Docs.tsx) | [Roadmap](./frontend/src/pages/Roadmap.tsx) |
 
-Hackathon opportunities are spread across many platforms and community pages. HackRadar makes discovery easier without pretending to be the source of truth. Every listing still links back to the original source.
+_No official logo asset is committed in this repository yet, so the README uses the HackRadar wordmark for now._
 
-## Key features
+## 🔷 What is HackRadar?
 
-- Searchable hackathon listings.
-- Filters for status, mode, country, and other event metadata.
-- Adapter-based crawling for multiple public sources.
-- Normalization and deduplication in the backend pipeline.
-- Initiative and contributor onboarding through the Join page.
-- Documentation and governance pages for newcomers.
+Hackathons are scattered across many platforms, community pages, and event hubs. Finding the right opportunity often means jumping between tabs, re-checking deadlines, and trying to compare listings that all look slightly different.
 
-## Architecture overview
+HackRadar is the discovery layer that brings those public hackathon listings into one searchable, filterable experience. It aggregates events from multiple sources, preserves attribution to the original host, and presents the results in a single place that is easy to browse.
+
+## 🔵 Why HackRadar?
+
+- Discover hackathons in one place
+- Search and filter opportunities without the tab overload
+- See deadlines, eligibility, themes, prizes, and participation modes
+- Preserve original source attribution
+- Reduce the time spent searching across multiple platforms
+- Keep the project open-source and community-driven
+
+## 🔹 How It Works
 
 ```text
-Public sources
-  -> source adapters
-  -> crawler and parser pipeline
-  -> normalization
-  -> deduplication
-  -> PostgreSQL
-  -> API
-  -> frontend
+Hackathon platforms
+  ↓
+HackRadar crawler
+  ↓
+Normalization + deduplication
+  ↓
+HackRadar database
+  ↓
+Discovery API
+  ↓
+HackRadar website
 ```
 
-The backend contains the crawler, pipeline, API routes, validation, database schema, and debug utilities. The frontend contains the public discovery UI, contributor pages, and documentation surfaces.
+The public website is the product surface. The crawler and backend keep the data fresh, normalized, and easy to browse.
 
-## Supported sources and adapters
+## 💙 Features
 
-Adapters currently present in the repository include:
+| Feature | What it gives you |
+| --- | --- |
+| Hackathon discovery | Browse public hackathon listings in one place |
+| Search | Find events by name, theme, platform, or related details |
+| Filters | Narrow results by status, mode, country, and other metadata |
+| Hackathon details | Open each event with structured public information |
+| Source attribution | Always link back to the original event page |
+| Multi-platform aggregation | Combine listings from many public sources |
+| Deadline and status information | Surface closing dates and live event status |
+| Open-source contribution | Invite the community to improve the project |
+| HackRadar Fellowship | Track official contributors who join the program |
+| Fellowship leaderboard | Show public recognition for merged Fellowship work |
+| Contributor directory | Highlight the wider HackRadar contributor community |
+| Community-driven improvements | Keep the product evolving in the open |
 
-- Devpost
-- MLH
-- Devfolio
-- Unstop
-- DoraHacks
-- Taikai
-- HackerEarth
-- Hack2Skill
-- Reskilll
-- Lablab
-- ETHGlobal
-- AngelHack
-- Hack Club
-- University sources
-- Eventbrite
-- Luma
-- Meetup
-- GitHub
-- Reddit
-- Discord
-- Telegram
-- LinkedIn
-- Twitter
-- Facebook
-- Google
-- Manual fallback entries
+## 🟦 HackRadar Fellowship
 
-See `backend/src/crawler/adapters/` for the implementation details.
+HackRadar Fellowship is for contributors who officially join through the Fellowship application.
 
-## Tech stack
+- Fellowship membership is tied to the official application process, not just PR activity.
+- Contributions are tracked through GitHub and merged work.
+- Non-Fellowship contributors can still contribute and appear on the public Contributors page.
+- The public leaderboard only includes Fellowship members with recorded merged contributions.
+
+Points are based on contribution difficulty, not raw lines of code:
+
+| Difficulty | Points |
+| --- | ---: |
+| Easy | 5 |
+| Medium | 15 |
+| Hard | 30 |
+| Expert | 50 |
+
+> Points are awarded for merged work that has been reviewed and accepted, not for opening a PR.
+
+Public Fellowship views only expose safe public fields such as GitHub username, avatar, points, merged PR counts, contribution areas, and rank. Private application fields like email, motivation, availability, and LinkedIn links are not exposed publicly.
+
+## 🔷 Open Source
+
+HackRadar is built in the open, and contributions are welcome from both technical and non-technical contributors.
+
+Common contribution lanes include:
+
+| Track | What it covers |
+| --- | --- |
+| Frontend | UI, layout, accessibility, and user experience improvements |
+| Backend | API work, data handling, services, and server-side logic |
+| Crawler / Data | Source adapters, normalization, deduplication, and data quality |
+| Design / UX | Visual polish, interaction design, and presentation |
+| Documentation | Guides, reference docs, and project clarity |
+| Community / Outreach | Contributor growth, onboarding, and project communication |
+| Testing | Coverage, regressions, and reliability |
+| Accessibility | Inclusive experiences and usability improvements |
+
+Read more in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## 🔵 Architecture
 
 ### Frontend
 
@@ -79,8 +112,7 @@ See `backend/src/crawler/adapters/` for the implementation details.
 - TypeScript
 - Vite
 - Tailwind CSS
-- React Router
-- Vitest
+- Radix / shadcn-style components
 
 ### Backend
 
@@ -88,17 +120,25 @@ See `backend/src/crawler/adapters/` for the implementation details.
 - TypeScript
 - PostgreSQL
 - Drizzle ORM
-- Cheerio
 - Playwright
-- ts-node
+- Cheerio
 
-## Local development
+HackRadar uses an adapter-based crawler architecture. Platform-specific adapters live in `backend/src/crawler/adapters/`, which makes it easier to add new sources without rewriting the whole pipeline.
 
-### Prerequisites
+## 🔹 Repository Structure
 
-- Node.js 22 or newer
-- npm
-- PostgreSQL
+```text
+frontend/
+backend/
+.github/
+scripts/
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+README.md
+```
+
+## 💙 Getting Started
 
 ### Frontend
 
@@ -108,6 +148,8 @@ npm ci
 npm run dev
 ```
 
+If you need the frontend to point at a non-default backend, set `VITE_API_BASE_URL`. When it is not set, the app uses `http://localhost:3001` during development.
+
 ### Backend
 
 ```bash
@@ -116,19 +158,7 @@ npm ci
 npm run dev
 ```
 
-The backend entrypoint starts the server and then runs the crawler bootstrap tasks defined in `backend/src/index.ts`.
-
-### Crawler and adapter debugging
-
-Use the debug scripts under `backend/src/debug/` when you need to validate crawler behavior, adapter output, or data quality locally.
-
-## Environment configuration
-
-### Backend
-
-Create `backend/.env` with the variables required by the backend runtime and crawler tooling.
-
-Typical values include:
+The backend requires PostgreSQL and these environment variables at minimum:
 
 - `DATABASE_URL`
 - `SMTP_HOST`
@@ -137,110 +167,54 @@ Typical values include:
 - `SMTP_PASS`
 - `RECEIVE_EMAIL`
 
-Never commit secrets or production credentials.
+Optional backend settings include `SMTP_FROM`, `SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_TIMEOUT_MS`, `API_PORT`, `GITHUB_TOKEN`, and `GITHUB_REPOSITORY`.
 
-### Frontend
+## 🔷 Contributing
 
-- `VITE_API_BASE_URL` sets the backend API base URL.
-- When it is not set, the app uses `http://localhost:3001` during development.
+1. Find an issue in the track that matches your skills.
+2. Pick a contribution lane and work on the issue.
+3. Open a pull request with a clear summary of the change.
+4. CI checks the contribution automatically.
+5. Maintainers review, discuss, and merge when it is ready.
+6. Fellowship contributions receive points when the work is merged and matches the Fellowship rules.
 
-## Running the frontend
+Start with [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-```bash
-cd frontend
-npm run dev
-```
+## 🔵 Community & Governance
 
-## Running the backend
+HackRadar is community-driven and designed to be transparent.
 
-```bash
-cd backend
-npm run dev
-```
+- [Governance](./frontend/src/pages/Governance.tsx)
+- [Code of Conduct](./CODE_OF_CONDUCT.md)
+- [Security](./SECURITY.md)
+- [Transparency](./frontend/src/pages/Transparency.tsx)
+- [Roadmap](./frontend/src/pages/Roadmap.tsx)
 
-## Running the crawler
+## 🔹 Roadmap
 
-The crawler is launched by the backend entrypoint and related debug scripts.
+The current roadmap focuses on four lanes:
 
-- `cd backend && npm run dev` starts the server and the bootstrap crawl flow.
-- `backend/src/debug/runFreshCrawl.ts` is useful for local reset-and-run validation.
-- `backend/src/debug/fullTest.ts` and the adapter verification scripts help exercise crawler behavior without changing production code.
+- **Now** - discovery improvements, the Join flow, contributors, and documentation / transparency pages
+- **Next** - crawler health summaries, API improvements, and normalization / deduplication refinements
+- **Exploring** - SDKs, contributor recognition, and improved search / recommendations
+- **Completed** - the discovery UI and filters, the normalized API, and the community Join flow
 
-## Testing
+See the full page here: [Roadmap](./frontend/src/pages/Roadmap.tsx)
 
-### Frontend
+## 💙 Project Links
 
-```bash
-cd frontend
-npm run lint
-npx tsc --noEmit
-npm run test
-npm run build
-```
+| Surface | Route | Link |
+| --- | --- | --- |
+| HackRadar website | `/` | [Homepage source](./frontend/src/pages/Index.tsx) |
+| Discover Hackathons | `/hackathons` | [Hackathons page source](./frontend/src/pages/Hackathons.tsx) |
+| Join Fellowship | `/join` | [Join page source](./frontend/src/pages/Join.tsx) |
+| Contributors | `/contributors` | [Contributors page source](./frontend/src/pages/Contributors.tsx) |
+| Leaderboard | `/leaderboard` | [Leaderboard page source](./frontend/src/pages/Leaderboard.tsx) |
+| Roadmap | `/roadmap` | [Roadmap page source](./frontend/src/pages/Roadmap.tsx) |
+| Transparency | `/transparency` | [Transparency page source](./frontend/src/pages/Transparency.tsx) |
+| Documentation | `/docs` | [Docs page source](./frontend/src/pages/Docs.tsx) |
+| GitHub repository | `main` branch | [ZainabTravadi/List-Of-Hackathons](https://github.com/ZainabTravadi/List-Of-Hackathons) |
 
-### Backend
+## 🔷 License
 
-```bash
-cd backend
-npm run test:unit
-npm run build
-```
-
-## Contributing
-
-Start with `CONTRIBUTING.md`.
-
-HackRadar uses structured GitHub issue forms, auto-labeling, auto-assignment, PR label inheritance, and an hourly ownership-expiry sweep to keep the contributor flow organized.
-
-## Contribution tracks
-
-The formal GitHub contribution tracks are:
-
-- Frontend
-- Backend
-- Crawler and data
-- Design and UX
-- Documentation
-- Community
-- Testing
-- Accessibility
-
-The Join page also accepts broader interest areas such as outreach, translation, partnerships, and other collaboration notes, but the GitHub issue workflow uses the formal tracks above as the source of truth.
-
-## HackRadar Fellowship
-
-HackRadar tracks Fellowship participation through the official initiative application database and the canonical GitHub label `hackradar fellowship`.
-
-- A contributor becomes a Fellowship participant when their application exists in PostgreSQL and includes a GitHub username.
-- The `/contributors` page shows the broader open-source community, including people who are not in the Fellowship.
-- The `/leaderboard` page only shows Fellowship members with recorded merged contributions.
-- Issue forms include a suggested difficulty field, but maintainers set the authoritative `difficulty: easy|medium|hard|expert` label before points are awarded.
-- PRs inherit the Fellowship label from linked Fellowship issues, and merged PRs are recorded only once in the contribution ledger.
-- Points are awarded for merged work using the difficulty scale below, not raw lines of code.
-
-### Points
-
-- Easy: `+5`
-- Medium: `+15`
-- Hard: `+30`
-- Expert: `+50`
-
-### Public data
-
-Public Fellowship views only expose safe fields such as GitHub username, avatar, points, merged PR counts, contribution areas, and rank. Private application fields like email, motivation, availability, and LinkedIn links are never exposed publicly.
-
-## Governance
-
-See `frontend/src/pages/Governance.tsx` and the governance sections of the contributor docs for the project values and decision flow.
-
-## Security
-
-Security-sensitive reports should follow `SECURITY.md`. Do not post secrets, credentials, or exploit details in public issues.
-
-## Code of Conduct
-
-See `CODE_OF_CONDUCT.md`.
-
-## License status
-
-This repository does not currently declare an official license file. If that changes, the license should be added to the repository explicitly and documented here.
+This repository does not currently include a LICENSE file. Licensing is pending maintainer decision.
