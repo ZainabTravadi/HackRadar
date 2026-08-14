@@ -97,7 +97,7 @@ export default function About() {
                 </div>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Button asChild className="rounded-full bg-primary-gradient shadow-glow">
-                    <a href="https://github.com/ZainabTravadi/List-Of-Hackathons" target="_blank" rel="noreferrer">
+                    <a href="https://github.com/ZainabTravadi/HackRadar" target="_blank" rel="noreferrer">
                       View on GitHub
                     </a>
                   </Button>

@@ -20,7 +20,7 @@ export const Footer = () => {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
-                  href="https://github.com/ZainabTravadi/List-Of-Hackathons"
+                  href="https://github.com/ZainabTravadi/HackRadar"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
@@ -49,13 +49,13 @@ export const Footer = () => {
               © {new Date().getFullYear()} HackRadar. Built in the open.
             </p>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
-              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              <a href="https://github.com/ZainabTravadi/HackRadar/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
                 Contributing
               </a>
-              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              <a href="https://github.com/ZainabTravadi/HackRadar/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
                 Code of Conduct
               </a>
-              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/SECURITY.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+              <a href="https://github.com/ZainabTravadi/HackRadar/blob/main/SECURITY.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
                 Security
               </a>
             </div>

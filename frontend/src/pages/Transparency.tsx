@@ -138,8 +138,8 @@ export default function Transparency() {
           </div>
 
           <div className="mt-10 rounded-[1.5rem] border border-border/70 bg-card/80 p-6 text-sm text-muted-foreground">
-            View source:{" "}
-            <a href="https://github.com/ZainabTravadi/List-Of-Hackathons" target="_blank" rel="noreferrer" className="font-medium text-primary underline-offset-4 hover:underline">
+            View source: {" "}
+            <a href="https://github.com/ZainabTravadi/HackRadar" target="_blank" rel="noreferrer" className="font-medium text-primary underline-offset-4 hover:underline">
               GitHub
             </a>
           </div>

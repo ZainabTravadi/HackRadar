@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Contribution guide
-    url: https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CONTRIBUTING.md
+    url: https://github.com/ZainabTravadi/HackRadar/blob/main/CONTRIBUTING.md
     about: Read the contributor workflow, branch guidance, CI expectations, and the 72-hour ownership window.
   - name: Security policy
-    url: https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/SECURITY.md
+    url: https://github.com/ZainabTravadi/HackRadar/blob/main/SECURITY.md
     about: Use this for responsible disclosure and security-sensitive reports.

@@ -131,7 +131,7 @@ const HackathonDetail = () => {
                 <div className="mt-4">
                   <Button asChild size="sm" variant="outline" className="rounded-full border-border/70">
                     <a
-                      href={`https://github.com/ZainabTravadi/List-Of-Hackathons/issues/new?title=${encodeURIComponent(`[Data Issue] ${h.title}`)}&body=${encodeURIComponent(
+                      href={`https://github.com/ZainabTravadi/HackRadar/issues/new?title=${encodeURIComponent(`[Data Issue] ${h.title}`)}&body=${encodeURIComponent(
                         `I found a possible data issue with the following listing:\n\n- Title: ${h.title}\n- Source: ${h.platform}\n- Source URL: ${h.url}\n- Site slug: ${h.slug || ""}\n\nPlease describe the problem and any supporting links or screenshots here.`,
                       )}`}
                       target="_blank"

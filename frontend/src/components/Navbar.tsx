@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const GITHUB_URL = "https://github.com/ZainabTravadi/List-Of-Hackathons";
+const GITHUB_URL = "https://github.com/ZainabTravadi/HackRadar";
 
 const community = [
   { to: '/join', label: 'Contribute' },

@@ -180,7 +180,7 @@ export default function Join() {
                 </p>
                 <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                   <a
-                    href="https://github.com/ZainabTravadi/List-Of-Hackathons"
+                    href="https://github.com/ZainabTravadi/HackRadar"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center justify-center rounded-full bg-primary-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"

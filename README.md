@@ -243,7 +243,7 @@ See the full page here: [Roadmap](./frontend/src/pages/Roadmap.tsx)
 | Roadmap | `/roadmap` | [Roadmap page source](./frontend/src/pages/Roadmap.tsx) |
 | Transparency | `/transparency` | [Transparency page source](./frontend/src/pages/Transparency.tsx) |
 | Documentation | `/docs` | [Docs page source](./frontend/src/pages/Docs.tsx) |
-| GitHub repository | `main` branch | [ZainabTravadi/List-Of-Hackathons](https://github.com/ZainabTravadi/List-Of-Hackathons) |
+| GitHub repository | `main` branch | [ZainabTravadi/HackRadar](https://github.com/ZainabTravadi/HackRadar) |
 
 ## 🔷 License
 
