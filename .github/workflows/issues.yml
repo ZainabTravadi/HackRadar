@@ -1,0 +1,50 @@
+name: Issue Automation
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+      - edited
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: issue-automation-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  automate:
+    name: Label, detect duplicates, and assign
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure canonical labels exist
+        run: node scripts/hackradar-contributor-automation.mjs ensure-labels
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+      - name: Process issue opened or edited
+        if: github.event_name == 'issues'
+        run: node scripts/hackradar-contributor-automation.mjs issue-opened
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+      - name: Process issue claim comment
+        if: github.event_name == 'issue_comment'
+        run: node scripts/hackradar-contributor-automation.mjs issue-claimed
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}

@@ -1,0 +1,137 @@
+{
+  "canonicalFellowshipLabel": "hackradar fellowship",
+  "trackLabels": {
+    "frontend": ["frontend"],
+    "backend": ["backend"],
+    "crawler-data": ["crawler", "data"],
+    "design-ux": ["design"],
+    "documentation": ["documentation"],
+    "community": ["community", "outreach"],
+    "testing": ["testing"],
+    "accessibility": ["accessibility"],
+    "bug-report": ["bug"],
+    "feature-request": ["enhancement"]
+  },
+  "tracks": [
+    {
+      "id": "frontend",
+      "title": "Frontend",
+      "titlePrefix": "[Frontend]",
+      "description": "UI, interaction, responsive layout, and accessibility work in the React app.",
+      "focusAreas": ["Search and filters", "Hackathon cards", "Navigation", "Homepage", "Accessibility", "Motion and polish"]
+    },
+    {
+      "id": "backend",
+      "title": "Backend",
+      "titlePrefix": "[Backend]",
+      "description": "API routes, validation, database queries, SMTP, and reliability work.",
+      "focusAreas": ["API routes", "Validation", "Database queries", "SMTP", "Reliability", "Performance"]
+    },
+    {
+      "id": "crawler-data",
+      "title": "Crawler and data",
+      "titlePrefix": "[Crawler/Data]",
+      "description": "Adapters, normalization, deduplication, source coverage, and data quality.",
+      "focusAreas": ["Adapters", "Normalization", "Deduplication", "Source coverage", "Scheduler", "Quality checks"]
+    },
+    {
+      "id": "design-ux",
+      "title": "Design and UX",
+      "titlePrefix": "[Design/UX]",
+      "description": "Visual storytelling, motion, content hierarchy, and interface refinement.",
+      "focusAreas": ["Visual language", "Landing pages", "Motion", "Content", "Information architecture", "Accessibility"]
+    },
+    {
+      "id": "documentation",
+      "title": "Documentation",
+      "titlePrefix": "[Documentation]",
+      "description": "README files, contributor guidance, adapter docs, and API docs.",
+      "focusAreas": ["README", "CONTRIBUTING", "Adapter docs", "API docs", "Issue templates", "Developer docs"]
+    },
+    {
+      "id": "community",
+      "title": "Community",
+      "titlePrefix": "[Community]",
+      "description": "Onboarding, governance, contributor support, outreach, translation, and partnerships.",
+      "focusAreas": ["Onboarding", "Governance", "Mentoring", "Outreach", "Translation", "Partnerships"]
+    },
+    {
+      "id": "testing",
+      "title": "Testing",
+      "titlePrefix": "[Testing]",
+      "description": "Unit tests, integration tests, fixtures, CI automation, and regression coverage.",
+      "focusAreas": ["Frontend tests", "Backend tests", "Crawler tests", "Fixtures", "CI automation", "Regression coverage"]
+    },
+    {
+      "id": "accessibility",
+      "title": "Accessibility",
+      "titlePrefix": "[Accessibility]",
+      "description": "Keyboard support, screen reader support, contrast, and reduced-motion work.",
+      "focusAreas": ["Keyboard navigation", "Screen readers", "Focus states", "Contrast", "Reduced motion", "Forms"]
+    },
+    {
+      "id": "bug-report",
+      "title": "Bug report",
+      "titlePrefix": "[Bug]",
+      "description": "Report a problem with the app, API, crawler, or documentation.",
+      "focusAreas": ["Frontend bug", "Backend bug", "Crawler bug", "Documentation bug", "Other"]
+    },
+    {
+      "id": "feature-request",
+      "title": "Feature request",
+      "titlePrefix": "[Feature]",
+      "description": "Propose an improvement for the product, workflow, or developer experience.",
+      "focusAreas": ["Frontend feature", "Backend feature", "Crawler feature", "Documentation feature", "Other"]
+    }
+  ],
+  "labels": [
+    { "name": "bug", "color": "d73a4a", "description": "Something is broken and needs attention." },
+    { "name": "enhancement", "color": "a2eeef", "description": "An improvement or new capability." },
+    { "name": "documentation", "color": "0075ca", "description": "Documentation-only work." },
+    { "name": "crawler", "color": "7057ff", "description": "Crawler or adapter work." },
+    { "name": "data", "color": "1f883d", "description": "Normalization, deduplication, or data quality work." },
+    { "name": "frontend", "color": "0969da", "description": "Frontend UI or interaction work." },
+    { "name": "backend", "color": "0e8a16", "description": "Backend API, validation, or persistence work." },
+    { "name": "design", "color": "c084fc", "description": "Visual design or UX improvements." },
+    { "name": "community", "color": "fbca04", "description": "Community operations or contributor support." },
+    { "name": "outreach", "color": "5319e7", "description": "Outreach and community growth." },
+    { "name": "testing", "color": "d4c5f9", "description": "Testing, fixtures, or CI coverage." },
+    { "name": "accessibility", "color": "bfdadc", "description": "Accessibility improvements or audits." },
+    { "name": "good first issue", "color": "7057ff", "description": "A beginner-friendly issue." },
+    { "name": "help wanted", "color": "008672", "description": "Extra help from contributors would be useful." },
+    { "name": "needs triage", "color": "ededed", "description": "Needs maintainer review or routing." },
+    { "name": "in progress", "color": "d876e3", "description": "Actively being worked on." },
+    { "name": "blocked", "color": "d93f0b", "description": "Work is blocked on another dependency or decision." },
+    { "name": "duplicate", "color": "cfd3d7", "description": "Duplicate of another issue." },
+    { "name": "hackradar fellowship", "color": "6f42c1", "description": "Contribution is part of the HackRadar Fellowship." },
+    { "name": "difficulty: easy", "color": "0e8a16", "description": "Maintainer-approved easy contribution." },
+    { "name": "difficulty: medium", "color": "fbca04", "description": "Maintainer-approved medium contribution." },
+    { "name": "difficulty: hard", "color": "d93f0b", "description": "Maintainer-approved hard contribution." },
+    { "name": "difficulty: expert", "color": "8a2be2", "description": "Maintainer-approved expert contribution." }
+  ],
+  "inheritableLabels": [
+    "bug",
+    "enhancement",
+    "documentation",
+    "crawler",
+    "data",
+    "frontend",
+    "backend",
+    "design",
+    "community",
+    "outreach",
+    "testing",
+    "accessibility",
+    "hackradar fellowship",
+    "difficulty: easy",
+    "difficulty: medium",
+    "difficulty: hard",
+    "difficulty: expert"
+  ],
+  "nonInheritableLabels": [
+    "duplicate",
+    "needs triage",
+    "in progress",
+    "blocked"
+  ]
+}

@@ -13,6 +13,13 @@ import { crawlerMetrics, cacheRefreshStatus } from './db/schema';
 import { computeHackathonStatus, resolveHackathonDeadline } from './pipeline/status';
 import { eq, desc, count, sql } from 'drizzle-orm';
 import { InitiativeSubmissionError, submitInitiativeApplication } from './services/initiativeApplications';
+import {
+  getFellowshipContributor,
+  getFellowshipLeaderboard,
+  getPublicContributors,
+  recordMergedContribution,
+  type RecordContributionInput,
+} from './services/fellowship';
 
 type ApiHackathon = {
   slug: string;
@@ -321,9 +328,74 @@ const server = createServer(async (req, res) => {
   }
 
   // Allow POST for the initiative application endpoint; otherwise only GET is permitted
-  if (req.method !== 'GET' && !(url.pathname === '/api/initiative/applications' && req.method === 'POST')) {
+  if (
+    req.method !== 'GET' &&
+    !(url.pathname === '/api/initiative/applications' && req.method === 'POST') &&
+    !(url.pathname === '/internal/fellowship/contributions' && req.method === 'POST')
+  ) {
     sendJson(res, 405, { error: 'Method not allowed' });
     return;
+  }
+
+  if (url.pathname === '/api/contributors' && req.method === 'GET') {
+    const contributors = await getPublicContributors();
+    sendJson(res, 200, {
+      updatedAt: new Date().toISOString(),
+      contributors,
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/fellowship/leaderboard' && req.method === 'GET') {
+    const leaderboard = await getFellowshipLeaderboard();
+    sendJson(res, 200, {
+      updatedAt: new Date().toISOString(),
+      leaderboard,
+    });
+    return;
+  }
+
+  const fellowshipContributorMatch = url.pathname.match(/^\/api\/fellowship\/contributors\/([^/]+)$/);
+  if (fellowshipContributorMatch && req.method === 'GET') {
+    const username = decodeURIComponent(fellowshipContributorMatch[1]);
+    const contributor = await getFellowshipContributor(username);
+    if (!contributor) {
+      sendJson(res, 404, { error: 'Contributor not found' });
+      return;
+    }
+    sendJson(res, 200, { contributor, updatedAt: new Date().toISOString() });
+    return;
+  }
+
+  if (url.pathname === '/internal/fellowship/contributions' && req.method === 'POST') {
+    if (!checkInternalAuth(req)) {
+      sendJson(res, 401, { error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const body = await parseBody(req, 64 * 1024);
+      const result = await recordMergedContribution(body as RecordContributionInput);
+      sendJson(res, result.recorded ? 201 : 200, {
+        success: result.recorded,
+        duplicate: result.duplicate,
+        ...(result.recorded ? { contribution: result.contribution } : {}),
+        ...(result.recorded || result.duplicate ? {} : { reason: result.reason }),
+      });
+      return;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Invalid JSON payload') {
+        sendJson(res, 400, { success: false, error: error.message });
+        return;
+      }
+      if (error instanceof Error && error.message === 'Request body too large') {
+        sendJson(res, 413, { success: false, error: error.message });
+        return;
+      }
+      console.error('[Fellowship] Contribution record failed:', error);
+      sendJson(res, 500, { success: false, error: 'Unable to record contribution.' });
+      return;
+    }
   }
 
   if (url.pathname === '/api/hackathons') {

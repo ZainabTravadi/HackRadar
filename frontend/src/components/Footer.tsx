@@ -1,64 +1,82 @@
 import { Link } from "react-router-dom";
-import { Radar } from "lucide-react";
+import { ArrowUpRight, Github, HeartPulse, Radar } from "lucide-react";
 
 export const Footer = () => {
   return (
-    <footer className="border-t border-border/60 bg-background">
-      <div className="container py-12">
-        <div className="grid gap-8 md:grid-cols-5">
-          <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 font-semibold">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-gradient text-primary-foreground">
-                <Radar className="h-4 w-4" />
-              </span>
-              HackRadar
-            </Link>
-            <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-              An open-source initiative to make hackathons and technical opportunities easier to discover.
+    <footer className="mt-12 border-t border-border/60 bg-gradient-to-b from-background to-secondary/25">
+      <div className="container py-14">
+        <div className="glass-surface-strong overflow-hidden rounded-[2rem]">
+          <div className="grid gap-8 p-6 md:grid-cols-[1.3fr_0.9fr_0.9fr_0.9fr] md:p-8">
+            <div className="relative md:pr-8">
+              <div className="absolute inset-0 -z-10 bg-radar-gradient opacity-70 blur-2xl" aria-hidden />
+              <Link to="/" className="flex items-center gap-3 font-semibold text-foreground">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-gradient text-primary-foreground shadow-glow">
+                  <Radar className="h-5 w-5" />
+                </span>
+                <span className="text-lg tracking-tight">HackRadar</span>
+              </Link>
+              <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
+                HackRadar is an open-source discovery engine for hackathons and technical opportunities, built in public with the community.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a
+                  href="https://github.com/ZainabTravadi/List-Of-Hackathons"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
+                >
+                  <Github className="h-4 w-4" />
+                  GitHub
+                </a>
+                <Link
+                  to="/join"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  Join the initiative
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            <FooterColumn title="Discover" links={[["/hackathons", "Hackathons"], ["/organizers", "Organizers"]]} />
+            <FooterColumn title="Community" links={[["/join", "Join"], ["/contributors", "Contributors"], ["/leaderboard", "Leaderboard"]]} />
+            <FooterColumn title="Project" links={[["/about", "About"], ["/transparency", "Transparency"], ["/roadmap", "Roadmap"], ["/governance", "Governance"], ["/impact", "Impact"], ["/docs", "Docs"], ["/api", "API"]]} />
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-border/70 px-6 py-5 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between md:px-8">
+            <p className="inline-flex items-center gap-2">
+              <HeartPulse className="h-3.5 w-3.5 text-primary" />
+              © {new Date().getFullYear()} HackRadar. Built in the open.
             </p>
-          </div>
-
-          <div>
-            <h4 className="mb-3 text-sm font-semibold text-foreground">Discover</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/hackathons" className="hover:text-foreground">Hackathons</Link></li>
-              <li><Link to="/organizers" className="hover:text-foreground">Organizers</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-3 text-sm font-semibold text-foreground">Community</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/join" className="hover:text-foreground">Join</Link></li>
-              <li><Link to="/contributors" className="hover:text-foreground">Contributors</Link></li>
-              <li><Link to="/leaderboard" className="hover:text-foreground">Leaderboard</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-3 text-sm font-semibold text-foreground">Project</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/about" className="hover:text-foreground">About</Link></li>
-              <li><Link to="/transparency" className="hover:text-foreground">Transparency</Link></li>
-              <li><Link to="/roadmap" className="hover:text-foreground">Roadmap</Link></li>
-              <li><Link to="/governance" className="hover:text-foreground">Governance</Link></li>
-              <li><Link to="/impact" className="hover:text-foreground">Impact</Link></li>
-              <li><Link to="/docs" className="hover:text-foreground">Docs</Link></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border/60 pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
-          <p>© {new Date().getFullYear()} HackRadar. Built in the open.</p>
-          <div className="flex gap-3 flex-wrap">
-            <a href="https://github.com/ZainabTravadi/List-Of-Hackathons" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
-            <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className="hover:text-foreground">Contributing</a>
-            <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className="hover:text-foreground">Code of Conduct</a>
-            <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/SECURITY.md" target="_blank" rel="noreferrer" className="hover:text-foreground">Security</a>
-            <Link to="/api" className="hover:text-foreground">API</Link>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+                Contributing
+              </a>
+              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+                Code of Conduct
+              </a>
+              <a href="https://github.com/ZainabTravadi/List-Of-Hackathons/blob/main/SECURITY.md" target="_blank" rel="noreferrer" className="hover:text-foreground">
+                Security
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </footer>
   );
 };
+
+const FooterColumn = ({ title, links }: { title: string; links: [string, string][] }) => (
+  <div>
+    <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">{title}</h4>
+    <ul className="space-y-2 text-sm">
+      {links.map(([href, label]) => (
+        <li key={href}>
+          <Link to={href} className="text-muted-foreground transition-colors hover:text-foreground">
+            {label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </div>
+);

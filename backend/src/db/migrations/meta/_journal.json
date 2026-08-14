@@ -8,6 +8,13 @@
       "when": 1783869860063,
       "tag": "0000_free_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783869860064,
+      "tag": "0002_fellowship_contributions",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,36 @@
+name: Ownership Expiry
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ownership-expiry
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Clear expired assignments
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure canonical labels exist
+        run: node scripts/hackradar-contributor-automation.mjs ensure-labels
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+      - name: Expire stale assignments
+        run: node scripts/hackradar-contributor-automation.mjs expire-ownership
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}

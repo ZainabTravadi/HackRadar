@@ -1,0 +1,95 @@
+name: Documentation contribution
+description: Propose README, contributor guide, or developer documentation work.
+title: "[Documentation] "
+labels:
+  - documentation
+  - needs triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- hackradar-track: documentation -->
+        <!-- hackradar-kind: contribution -->
+        Use this form for README, contributor guide, adapter docs, or API documentation work.
+  - type: input
+    id: contributor_name
+    attributes:
+      label: Contributor name
+      placeholder: Your name or preferred display name
+    validations:
+      required: true
+  - type: input
+    id: github_username
+    attributes:
+      label: GitHub username
+      placeholder: your-handle
+    validations:
+      required: true
+  - type: textarea
+    id: work_item
+    attributes:
+      label: What do you want to work on?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why do you want to work on it?
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: Relevant skills or experience
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Expected scope
+      options:
+        - Small
+        - Medium
+        - Larger
+    validations:
+      required: true
+  - type: dropdown
+    id: suggested_difficulty
+    attributes:
+      label: Suggested difficulty
+      description: Maintainers will set the authoritative difficulty label before points are awarded.
+      options:
+        - Easy
+        - Medium
+        - Hard
+        - Expert
+    validations:
+      required: true
+  - type: dropdown
+    id: fellowship
+    attributes:
+      label: Are you completing this contribution as part of the HackRadar Fellowship?
+      options:
+        - Yes
+        - No
+    validations:
+      required: true
+  - type: textarea
+    id: links
+    attributes:
+      label: Relevant links
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched for duplicate issues.
+          required: true
+        - label: I understand the contribution guidelines in CONTRIBUTING.md.
+          required: true

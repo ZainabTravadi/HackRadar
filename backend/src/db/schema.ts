@@ -49,6 +49,7 @@ export const queueStatusEnum = pgEnum('queue_status_enum', ['queued', 'processin
 export const lockTypeEnum = pgEnum('lock_type_enum', ['scheduler', 'crawl']);
 export const sourceClassificationEnum = pgEnum('source_classification_enum', ['PRIMARY', 'AGGREGATOR', 'DISCOVERY']);
 export const sourceHealthEnum = pgEnum('source_health_enum', ['healthy', 'degraded', 'unhealthy']);
+export const difficultyEnum = pgEnum('difficulty_enum', ['easy', 'medium', 'hard', 'expert']);
 
 // Main entity for normalized hackathon records aggregated from multiple sources.
 export const hackathons = pgTable(
@@ -305,3 +306,30 @@ export const initiativeApplications = pgTable('initiative_applications', {
 
 export type InitiativeApplication = typeof initiativeApplications.$inferSelect;
 export type NewInitiativeApplication = typeof initiativeApplications.$inferInsert;
+
+// Fellowship contribution ledger used for public leaderboard aggregation.
+export const fellowshipContributions = pgTable('fellowship_contributions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  repository: text('repository').notNull(),
+  applicationId: uuid('application_id').notNull().references(() => initiativeApplications.id, { onDelete: 'cascade' }),
+  githubUsername: text('github_username').notNull(),
+  issueNumber: integer('issue_number').notNull(),
+  linkedIssueNumbers: text('linked_issue_numbers').array().notNull().default(sql`'{}'::text[]`),
+  prNumber: integer('pr_number').notNull(),
+  prUrl: text('pr_url').notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  points: integer('points').notNull(),
+  additions: integer('additions').notNull().default(0),
+  deletions: integer('deletions').notNull().default(0),
+  mergedAt: timestamp('merged_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  repositoryPrUniqueIdx: uniqueIndex('fellowship_contributions_repository_pr_unique_idx').on(table.repository, table.prNumber),
+  applicationIdx: index('fellowship_contributions_application_idx').on(table.applicationId),
+  githubUsernameIdx: index('fellowship_contributions_github_username_idx').on(table.githubUsername),
+  difficultyIdx: index('fellowship_contributions_difficulty_idx').on(table.difficulty),
+  mergedAtIdx: index('fellowship_contributions_merged_at_idx').on(table.mergedAt),
+}));
+
+export type FellowshipContribution = typeof fellowshipContributions.$inferSelect;
+export type NewFellowshipContribution = typeof fellowshipContributions.$inferInsert;
