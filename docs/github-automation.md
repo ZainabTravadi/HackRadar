@@ -15,9 +15,10 @@ HackRadar uses GitHub-native workflows to keep contributor work organized and ma
 ## `issues.yml`
 
 - Purpose: ensure labels exist, apply canonical labels, detect duplicates, and auto-assign issue creators.
-- Trigger: `issues` opened, reopened, edited, plus `issue_comment` created for `/claim`.
+- Trigger: `issues` opened, reopened, edited, plus `issue_comment` created for `/claim` and `/assign`.
 - Permissions: `contents: read`, `issues: write`.
 - What it changes: labels, comments, and assignees on issues.
+- Behavior: contribution issues that are open and unassigned gain the `up-for-grabs` label; issue creators are auto-assigned when appropriate; contributors can claim via `/assign` or `/claim` if the issue is eligible and unclaimed.
 - Failure behavior: logs permission failures and leaves the issue open.
 - Debugging: inspect the workflow logs and the event payload. The shared logic lives in `scripts/hackradar-contributor-automation.mjs`.
 

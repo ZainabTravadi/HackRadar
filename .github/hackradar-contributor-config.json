@@ -99,6 +99,7 @@
     { "name": "accessibility", "color": "bfdadc", "description": "Accessibility improvements or audits." },
     { "name": "good first issue", "color": "7057ff", "description": "A beginner-friendly issue." },
     { "name": "help wanted", "color": "008672", "description": "Extra help from contributors would be useful." },
+    { "name": "up-for-grabs", "color": "008672", "description": "Issue is open for outside contributors to claim." },
     { "name": "needs triage", "color": "ededed", "description": "Needs maintainer review or routing." },
     { "name": "in progress", "color": "d876e3", "description": "Actively being worked on." },
     { "name": "blocked", "color": "d93f0b", "description": "Work is blocked on another dependency or decision." },

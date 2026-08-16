@@ -482,6 +482,13 @@ async function handleIssueOpened(config, event, options = {}) {
   }
 
   const isContribution = isContributionIssue(issue, config);
+  if (isContribution && !issue.assignees?.length) {
+    const issueLabels = new Set((issue.labels || []).map((entry) => entry.name || entry));
+    if (!issueLabels.has("up-for-grabs")) {
+      await addIssueLabels(issue.number, ["up-for-grabs"]);
+    }
+  }
+
   if (isContribution) {
     const openContributionIssues = await countOpenContributionIssuesByUser(issue.user.login, config);
     if (openContributionIssues > 7) {
@@ -494,6 +501,9 @@ async function handleIssueOpened(config, event, options = {}) {
     try {
       await assignIssue(issue.number, issue.user.login);
       console.log(`Assigned issue #${issue.number} to ${issue.user.login}`);
+      if (!issue.labels?.some((label) => (label.name || label) === "in progress")) {
+        await addIssueLabels(issue.number, ["in progress"]);
+      }
     } catch (error) {
       console.log(`Could not assign issue #${issue.number} to ${issue.user.login}: ${error.message}`);
     }
@@ -507,21 +517,40 @@ async function handleIssueClaim(config, event) {
     return;
   }
 
-  const text = String(comment.body || "");
-  if (!/^\s*\/claim\s*$/i.test(text.trim())) {
+  const text = String(comment.body || "").trim();
+  const isClaimCommand = /^\/claim$/i.test(text) || /^\/assign$/i.test(text);
+  if (!isClaimCommand) {
     return;
   }
 
-  if (!isContributionIssue(issue, config)) {
+  if (!isContributionIssue(issue, config) && !issue.labels?.some((label) => (label.name || label) === "up-for-grabs")) {
     return;
   }
 
-  if ((issue.assignees || []).length > 0) {
+  const existingAssignee = (issue.assignees || [])[0]?.login;
+  if (existingAssignee) {
+    if (existingAssignee === comment.user.login) {
+      return;
+    }
+
+    await addIssueComment(
+      issue.number,
+      `This issue is already assigned to @${existingAssignee}. Please coordinate in the existing thread or wait for the assignment to clear.`,
+    );
     return;
   }
 
   try {
     await assignIssue(issue.number, comment.user.login);
+    if (!issue.labels?.some((label) => (label.name || label) === "in progress")) {
+      await addIssueLabels(issue.number, ["in progress"]);
+    }
+    if (issue.labels?.some((label) => (label.name || label) === "up-for-grabs")) {
+      await addIssueComment(
+        issue.number,
+        `@${comment.user.login} claimed this issue via /assign. The assignment is now active and the issue is no longer available for others until it is unassigned or resolved.`,
+      );
+    }
     console.log(`Claimed issue #${issue.number} for ${comment.user.login}`);
   } catch (error) {
     console.log(`Could not claim issue #${issue.number} for ${comment.user.login}: ${error.message}`);
