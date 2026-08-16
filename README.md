@@ -5,11 +5,13 @@
 <h1 align="center">HackRadar</h1>
 
 <p align="center">
-  <strong>It finds the hackathons you didn't know existed.</strong>
+  <a href="https://www.codetriage.com/zainabtravadi/hackradar">
+    <img src="https://www.codetriage.com/zainabtravadi/hackradar/badges/users.svg" alt="CodeTriage">
+  </a>
 </p>
 
 <p align="center">
-  <strong>A global discovery engine for hackathons.</strong><br />
+  <strong>It finds the hackathons you didn't know existed.</strong><br />
   HackRadar aggregates hackathons from across the web into one searchable platform, helping builders discover opportunities by deadline, theme, format, and more.
 </p>
 
