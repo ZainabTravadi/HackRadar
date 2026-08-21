@@ -1,0 +1,168 @@
+name: Star HackRadar Repository
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to verify
+        required: true
+        type: number
+
+permissions:
+  checks: write
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: star-required-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify repository star
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify repository star
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const checkName = "Star HackRadar Repository";
+            const eventPullRequest = context.payload.pull_request;
+            const pullNumber = eventPullRequest?.number || Number(context.payload.inputs?.pr_number);
+
+            if (!pullNumber) {
+              core.setFailed("A pull request number is required.");
+              return;
+            }
+
+            const pullRequest = eventPullRequest || (await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pullNumber,
+            })).data;
+            const author = pullRequest.user;
+            const issue = { owner, repo, issue_number: pullNumber };
+            const headSha = pullRequest.head.sha;
+
+            const upsertCheck = async (conclusion, title, summary) => {
+              const existing = await github.paginate(github.rest.checks.listForRef, {
+                owner,
+                repo,
+                ref: headSha,
+                check_name: checkName,
+                per_page: 100,
+              });
+              const payload = {
+                owner,
+                repo,
+                name: checkName,
+                head_sha: headSha,
+                status: "completed",
+                conclusion,
+                output: {
+                  title,
+                  summary,
+                },
+              };
+
+              if (existing.length > 0) {
+                await github.rest.checks.update({ check_run_id: existing[0].id, ...payload });
+              } else {
+                await github.rest.checks.create(payload);
+              }
+            };
+
+            const labels = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              ...issue,
+              per_page: 100,
+            })).map((label) => label.name);
+            const hasStarRequiredLabel = labels.includes("star-required");
+            const addStarRequiredLabel = async () => {
+              if (!hasStarRequiredLabel) {
+                await github.rest.issues.addLabels({ ...issue, labels: ["star-required"] });
+              }
+            };
+            const removeStarRequiredLabel = async () => {
+              if (hasStarRequiredLabel) {
+                await github.rest.issues.removeLabel({ ...issue, name: "star-required" });
+              }
+            };
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...issue,
+              per_page: 100,
+            });
+            const hasComment = (body) => comments.some((comment) => comment.body === body);
+            const blockedComment = [
+              "⭐ Star required before this PR can proceed.",
+              "",
+              "Please star the HackRadar repository and then PUSH A NEW COMMIT to this PR to trigger the checks again.",
+              "",
+              "Steps:",
+              "1. Star the HackRadar repository.",
+              "2. Make any required commit/change and push it to this PR branch.",
+              "3. GitHub Actions will automatically re-check your star status.",
+              "4. Once verified, the `star-required` block will be removed and normal CI/review can continue.",
+              "",
+              "Thank you for contributing to HackRadar! 🚀",
+            ].join("\\n");
+            const verifiedComment = "✅ Repository star verified. The star requirement has been satisfied. Your PR can now proceed through the normal HackRadar CI/review process. 🚀";
+            const addCommentOnce = async (body) => {
+              if (!hasComment(body)) {
+                await github.rest.issues.createComment({ ...issue, body });
+              }
+            };
+
+            try {
+              let exempt = author.type === "Bot" || author.login.endsWith("[bot]");
+              if (!exempt && ["OWNER", "MEMBER", "COLLABORATOR"].includes(pullRequest.author_association)) {
+                exempt = true;
+              }
+
+              if (!exempt) {
+                try {
+                  const permission = await github.rest.repos.getCollaboratorPermissionLevel({
+                    owner,
+                    repo,
+                    username: author.login,
+                  });
+                  exempt = ["admin", "maintain", "push"].includes(permission.data.user.permission);
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
+              }
+
+              if (exempt) {
+                await removeStarRequiredLabel();
+                await upsertCheck("success", "Star requirement not applicable", "Repository maintainers and trusted automation are exempt from the star requirement.");
+                return;
+              }
+
+              const starredRepositories = await github.paginate(github.rest.activity.listReposStarredByUser, {
+                username: author.login,
+                per_page: 100,
+              });
+              const hasStarred = starredRepositories.some((repository) => repository.full_name.toLowerCase() === `${owner}/${repo}`.toLowerCase());
+
+              if (!hasStarred) {
+                await addStarRequiredLabel();
+                await upsertCheck("failure", "Star required", "This external contributor must star HackRadar before the pull request can proceed.");
+                await addCommentOnce(blockedComment);
+                return;
+              }
+
+              await removeStarRequiredLabel();
+              await upsertCheck("success", "Repository star verified", "The PR author has starred HackRadar.");
+              await addCommentOnce(verifiedComment);
+            } catch (error) {
+              await addStarRequiredLabel();
+              await upsertCheck("failure", "Unable to verify repository star", "GitHub could not verify the PR author's repository star. The check is failing closed; try again on a new commit.");
+              core.setFailed(`Unable to verify repository star: ${error.message}`);
+            }

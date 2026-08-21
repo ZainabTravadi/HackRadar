@@ -105,6 +105,7 @@
     { "name": "blocked", "color": "d93f0b", "description": "Work is blocked on another dependency or decision." },
     { "name": "duplicate", "color": "cfd3d7", "description": "Duplicate of another issue." },
     { "name": "hackradar fellowship", "color": "6f42c1", "description": "Contribution is part of the HackRadar Fellowship." },
+    { "name": "star-required", "color": "b60205", "description": "External contributor must star HackRadar before the PR can proceed." },
     { "name": "difficulty: easy", "color": "0e8a16", "description": "Maintainer-approved easy contribution." },
     { "name": "difficulty: medium", "color": "fbca04", "description": "Maintainer-approved medium contribution." },
     { "name": "difficulty: hard", "color": "d93f0b", "description": "Maintainer-approved hard contribution." },

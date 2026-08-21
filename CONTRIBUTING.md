@@ -10,6 +10,17 @@ HackRadar discovers public hackathon listings, normalizes them, deduplicates the
 
 Anyone can contribute if they follow the project rules, respect the Code of Conduct, and avoid sharing secrets or private data.
 
+### HackRadar Contribution Rule
+
+⭐ Before contributing, please star the HackRadar repository.
+
+For pull requests:
+- A repository star is required before the PR can proceed.
+- If the PR is blocked by the `star-required` check, star the repository.
+- After starring, PUSH A NEW COMMIT to your PR branch so GitHub Actions can verify the star and unblock the PR.
+
+Please read `CONTRIBUTING.md` before opening a PR.
+
 ## 3. Contribution tracks
 
 The formal GitHub tracks are:
