@@ -94,6 +94,8 @@ export interface HackathonFilters {
   sort: string;
 }
 
+export type HackathonSort = "closing" | "newest" | "deadline-latest" | "name-asc" | "name-desc";
+
 function matchesSearchQuery(value: string, query: string): boolean {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
@@ -108,7 +110,7 @@ function matchesSearchQuery(value: string, query: string): boolean {
 }
 
 export function filterHackathons(hackathons: Hackathon[], filters: HackathonFilters): Hackathon[] {
-  let list = hackathons.filter((h) => {
+  const list = hackathons.filter((h) => {
     const matchesQuery = [
       h.title,
       h.description,
@@ -128,17 +130,45 @@ export function filterHackathons(hackathons: Hackathon[], filters: HackathonFilt
     return true;
   });
 
-  if (filters.sort === "closing") {
-    list = list.sort((a, b) => {
-      const aDays = getDeadlineInfo(a).days ?? Number.POSITIVE_INFINITY;
-      const bDays = getDeadlineInfo(b).days ?? Number.POSITIVE_INFINITY;
-      return aDays - bDays;
-    });
-  } else if (filters.sort === "newest") {
-    list = list.sort((a, b) => a.updatedHoursAgo - b.updatedHoursAgo);
+  return sortHackathons(list, filters.sort);
+}
+
+export function sortHackathons(hackathons: Hackathon[], sort: string): Hackathon[] {
+  if (sort !== "closing" && sort !== "newest" && sort !== "deadline-latest" && sort !== "name-asc" && sort !== "name-desc") {
+    return hackathons;
   }
 
-  return list;
+  const sorted = [...hackathons];
+
+  if (sort === "name-asc" || sort === "name-desc") {
+    sorted.sort((a, b) => {
+      const titleComparison = a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+      if (titleComparison !== 0) return sort === "name-asc" ? titleComparison : -titleComparison;
+
+      return a.slug.localeCompare(b.slug);
+    });
+    return sorted;
+  }
+
+  if (sort === "newest") {
+    sorted.sort((a, b) => a.updatedHoursAgo - b.updatedHoursAgo || a.slug.localeCompare(b.slug));
+    return sorted;
+  }
+
+  sorted.sort((a, b) => {
+    const aDeadline = resolveHackathonDeadline(a)?.getTime();
+    const bDeadline = resolveHackathonDeadline(b)?.getTime();
+    if (aDeadline === undefined && bDeadline === undefined) return a.slug.localeCompare(b.slug);
+    if (aDeadline === undefined) return 1;
+    if (bDeadline === undefined) return -1;
+
+    const deadlineComparison = aDeadline - bDeadline;
+    if (deadlineComparison !== 0) return sort === "closing" ? deadlineComparison : -deadlineComparison;
+
+    return a.slug.localeCompare(b.slug);
+  });
+
+  return sorted;
 }
 
 export async function fetchHackathons(filters?: Partial<HackathonFilters>): Promise<Hackathon[]> {

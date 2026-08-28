@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useHackathons } from "@/data/hackathons";
+import { sortHackathons, useHackathons } from "@/data/hackathons";
 import FilterChip from "@/components/ui/FilterChip";
 
 type Props = {
@@ -48,10 +48,11 @@ const Hackathons = ({
     theme: searchParams.get("theme") ?? presetTheme,
     status: searchParams.get("status") ?? presetStatus,
     country: searchParams.get("country") ?? presetCountry,
-    sort: searchParams.get("sort") ?? "closing",
+    sort: "closing",
   };
 
   const { data: hackathons = [], isLoading, error, refetch } = useHackathons(apiFilters);
+  const displayedHackathons = useMemo(() => sortHackathons(hackathons, sort), [hackathons, sort]);
 
   useEffect(() => {
     const qp = searchParams.get("q") ?? "";
@@ -153,12 +154,14 @@ const Hackathons = ({
               </div>
 
               <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="h-14 w-full min-w-[180px] rounded-full border-border/70 bg-card/80 backdrop-blur md:w-[180px]">
+                <SelectTrigger aria-label="Sort by" className="h-14 w-full min-w-[180px] rounded-full border-border/70 bg-card/80 backdrop-blur md:w-[180px]">
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="closing">Closing soonest</SelectItem>
-                  <SelectItem value="newest">Recently updated</SelectItem>
+                  <SelectItem value="closing">Deadline: Soonest first</SelectItem>
+                  <SelectItem value="deadline-latest">Deadline: Latest first</SelectItem>
+                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -357,7 +360,7 @@ const Hackathons = ({
               </div>
             ) : (
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {hackathons.map((item) => (
+                {displayedHackathons.map((item) => (
                   <HackathonCard key={item.slug} h={item} />
                 ))}
               </div>
