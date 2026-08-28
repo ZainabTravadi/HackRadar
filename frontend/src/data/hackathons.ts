@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiFetchJson } from "@/lib/api";
+import { formatHackathonDate } from "@/lib/date";
 import { computeHackathonStatus, resolveHackathonDeadline } from "@/lib/hackathonStatus";
 
 export type Platform = string;
@@ -80,12 +81,7 @@ export const getDeadlineInfo = (h: DeadlineFields) => {
 
 export const getStatus = (h: DeadlineFields): Status => getDeadlineInfo(h).status;
 
-export const formatDate = (iso: string | null | undefined) => {
-  if (!iso) return "Deadline TBA";
-  const value = new Date(iso);
-  if (Number.isNaN(value.getTime())) return "Deadline TBA";
-  return value.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-};
+export const formatDate = (iso: string | null | undefined) => formatHackathonDate(iso);
 
 export interface HackathonFilters {
   query: string;
