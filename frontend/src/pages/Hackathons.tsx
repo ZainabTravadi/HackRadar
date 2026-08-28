@@ -102,11 +102,13 @@ const Hackathons = ({
 
   const resetFilters = () => {
     setQuery("");
+    setDebouncedQuery("");
     setMode("all");
     setTheme("all");
     setStatus("all");
     setCountry("all");
     setSort("closing");
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   const applySheetFilters = () => {
@@ -356,7 +358,13 @@ const Hackathons = ({
               </div>
             ) : hackathons.length === 0 ? (
               <div className="rounded-[1.5rem] border border-dashed border-border/70 bg-card/70 p-16 text-center">
-                <p className="text-muted-foreground">No hackathons match these filters.</p>
+                <h2 className="font-display text-2xl font-bold tracking-tight">No hackathons found</h2>
+                <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+                  No hackathons matched your current search or filters. Try changing your search or filters to find more opportunities.
+                </p>
+                <Button type="button" variant="outline" onClick={resetFilters} className="mt-6 rounded-full" aria-label="Clear search and filters">
+                  Clear search and filters
+                </Button>
               </div>
             ) : (
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
