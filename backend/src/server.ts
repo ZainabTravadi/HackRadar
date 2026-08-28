@@ -256,7 +256,19 @@ function checkInternalAuth(req: IncomingMessage): boolean {
   return auth === `Bearer ${INTERNAL_SECRET}` || auth === INTERNAL_SECRET;
 }
 
-const server = createServer(async (req, res) => {
+const server = createServer((req, res) => {
+  void handleRequest(req, res).catch((error: unknown) => {
+    console.error('[Request] Unhandled request error:', error);
+    if (res.headersSent) {
+      res.destroy(error instanceof Error ? error : undefined);
+      return;
+    }
+
+    sendJson(res, 503, { error: 'Service temporarily unavailable.' }, req.headers.origin);
+  });
+});
+
+async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
 
@@ -528,7 +540,7 @@ const server = createServer(async (req, res) => {
   }
 
   sendJson(res, 404, { error: 'Not found' }, origin);
-});
+}
 
 server.listen(PORT, HOST, () => {
   console.info(`HackRadar API listening on http://${HOST}:${PORT}`);
