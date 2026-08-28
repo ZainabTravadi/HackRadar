@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HackathonCard } from "../components/HackathonCard";
 import { HackathonImage } from "../components/HackathonImage";
-import { filterHackathons, type Hackathon } from "../data/hackathons";
+import { filterHackathons, sortHackathons, type Hackathon } from "../data/hackathons";
 import { formatHackathonDate } from "@/lib/date";
 
 const sampleHackathons: Hackathon[] = [
@@ -150,5 +150,47 @@ describe("filterHackathons", () => {
     });
 
     expect(result[0].slug).toBe("beta");
+  });
+});
+
+describe("sortHackathons", () => {
+  const items = [
+    { ...sampleHackathons[0], slug: "zeta", title: "zeta", registrationDeadline: "2030-03-01T00:00:00.000Z" },
+    { ...sampleHackathons[1], slug: "alpha", title: "Alpha", registrationDeadline: "2030-01-01T00:00:00.000Z" },
+    { ...sampleHackathons[0], slug: "missing", title: "middle", description: "A different event.", tags: ["Other"], registrationDeadline: null, submissionDeadline: null },
+  ];
+
+  it("sorts deadlines soonest first and leaves missing deadlines last", () => {
+    expect(sortHackathons(items, "closing").map((item) => item.slug)).toEqual(["alpha", "zeta", "missing"]);
+  });
+
+  it("sorts deadlines latest first", () => {
+    expect(sortHackathons(items, "deadline-latest").map((item) => item.slug)).toEqual(["zeta", "alpha", "missing"]);
+  });
+
+  it("sorts names case-insensitively in both directions", () => {
+    expect(sortHackathons(items, "name-asc").map((item) => item.slug)).toEqual(["alpha", "missing", "zeta"]);
+    expect(sortHackathons(items, "name-desc").map((item) => item.slug)).toEqual(["zeta", "missing", "alpha"]);
+  });
+
+  it("preserves default ordering and does not mutate the input array", () => {
+    const original = [...items];
+    expect(sortHackathons(items, "")).toBe(items);
+    expect(items).toEqual(original);
+    expect(sortHackathons(items, "name-asc")).not.toBe(items);
+    expect(items).toEqual(original);
+  });
+
+  it("applies filtering before sorting", () => {
+    const result = filterHackathons(items, {
+      query: "AI",
+      mode: "all",
+      theme: "all",
+      status: "all",
+      country: "all",
+      sort: "name-asc",
+    });
+
+    expect(result.map((item) => item.slug)).toEqual(["zeta"]);
   });
 });
