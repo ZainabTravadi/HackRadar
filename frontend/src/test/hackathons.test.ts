@@ -1,4 +1,9 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { createElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { HackathonCard } from "../components/HackathonCard";
+import { HackathonImage } from "../components/HackathonImage";
 import { filterHackathons, type Hackathon } from "../data/hackathons";
 import { formatHackathonDate } from "@/lib/date";
 
@@ -60,6 +65,62 @@ describe("formatHackathonDate", () => {
   it("preserves the calendar day for UTC timestamps near timezone boundaries", () => {
     expect(formatHackathonDate("2026-12-31T23:30:00.000Z")).toBe("Dec 31, 2026");
     expect(formatHackathonDate("2026-01-01T00:30:00.000Z")).toBe("Jan 1, 2026");
+  });
+});
+
+describe("hackathon image fallback", () => {
+  it("renders a valid image url normally with accessible alt text", () => {
+    render(createElement(HackathonImage, { src: "https://example.com/hackathon.png", alt: "AI Builders promotional image" }));
+
+    expect(screen.getByRole("img", { name: /AI Builders promotional image/i })).toBeInTheDocument();
+  });
+
+  it("replaces broken image URLs with the fallback state", () => {
+    render(createElement(HackathonImage, { src: "https://example.com/broken.png", alt: "AI Builders promotional image" }));
+
+    const image = screen.getByRole("img", { name: /AI Builders promotional image/i });
+    fireEvent.error(image);
+
+    expect(screen.getByRole("img", { name: /Hackathon image unavailable/i })).toBeInTheDocument();
+  });
+
+  it("shows the fallback when the image URL is missing or empty", () => {
+    const { rerender } = render(createElement(HackathonImage, { src: null, alt: "AI Builders promotional image" }));
+    expect(screen.getByRole("img", { name: /Hackathon image unavailable/i })).toBeInTheDocument();
+
+    rerender(createElement(HackathonImage, { src: "", alt: "AI Builders promotional image" }));
+    expect(screen.getByRole("img", { name: /Hackathon image unavailable/i })).toBeInTheDocument();
+  });
+
+  it("uses the same fallback in the hackathon card layout", () => {
+    render(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(HackathonCard, {
+          h: {
+            slug: "alpha",
+            title: "AI Builders",
+            platform: "Devpost",
+            description: "An AI-focused hackathon for builders.",
+            registrationDeadline: "2030-01-01T00:00:00.000Z",
+            submissionDeadline: "2030-01-10T00:00:00.000Z",
+            eventEndDate: null,
+            mode: "Online",
+            status: "Open",
+            country: "India",
+            prize: "$500",
+            tags: ["AI"],
+            organizer: "Devpost",
+            url: "https://example.com/alpha",
+            updatedHoursAgo: 4,
+            imageUrl: null,
+          },
+        }),
+      ),
+    );
+
+    expect(screen.getByRole("img", { name: /Hackathon image unavailable/i })).toBeInTheDocument();
   });
 });
 

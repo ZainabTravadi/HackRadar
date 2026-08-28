@@ -13,6 +13,7 @@ export interface Hackathon {
   title: string;
   platform: Platform;
   description: string;
+  imageUrl?: string | null;
   registrationDeadline: string | null;
   submissionDeadline: string | null;
   eventEndDate: string | null;
@@ -31,6 +32,7 @@ type ApiHackathon = {
   title: string;
   platform: string;
   description: string;
+  imageUrl?: string | null;
   registrationDeadline: string | null;
   submissionDeadline: string | null;
   eventEndDate: string | null;
@@ -189,6 +191,7 @@ function toHackathon(row: ApiHackathon): Hackathon {
     title: row.title,
     platform: row.platform,
     description: row.description,
+    imageUrl: row.imageUrl ?? null,
     registrationDeadline: row.registrationDeadline,
     submissionDeadline: row.submissionDeadline,
     eventEndDate: row.eventEndDate,

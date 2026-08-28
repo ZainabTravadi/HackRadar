@@ -25,6 +25,7 @@ type ApiHackathon = {
   title: string;
   platform: string;
   description: string;
+  imageUrl: string | null;
   registrationDeadline: string | null;
   submissionDeadline: string | null;
   eventEndDate: string | null;
@@ -51,6 +52,7 @@ function toApiHackathon(row: DbHackathon): ApiHackathon {
     title: row.title,
     platform: toPlatformLabel(row.source),
     description: row.description?.trim() || row.title,
+    imageUrl: row.imageUrl?.trim() || null,
     registrationDeadline: row.registrationDeadline?.toISOString() ?? null,
     submissionDeadline: row.submissionDeadline?.toISOString() ?? null,
     eventEndDate: row.endDate?.toISOString() ?? null,
