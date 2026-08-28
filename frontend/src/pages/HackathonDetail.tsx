@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock3, ExternalLink, MapPin, MessageSquareWarning, Radar, Users } from "lucide-react";
+import { ArrowLeft, Calendar, Check, Clock3, Copy, ExternalLink, MapPin, MessageSquareWarning, Radar, Users } from "lucide-react";
 
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,21 @@ import { formatDate, getDeadlineInfo, getStatus, useHackathon } from "@/data/hac
 const HackathonDetail = () => {
   const { slug } = useParams();
   const { data: h, isLoading, error } = useHackathon(slug);
+  const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
+
+  const handleCopyLink = async () => {
+    if (!navigator.clipboard?.writeText) {
+      setCopyState("error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopyState("success");
+    } catch {
+      setCopyState("error");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -101,10 +117,17 @@ const HackathonDetail = () => {
                       Visit Official Site <ExternalLink className="ml-1.5 h-4 w-4" />
                     </a>
                   </Button>
+                  <Button type="button" variant="outline" size="lg" onClick={handleCopyLink} aria-describedby="copy-link-status">
+                    {copyState === "success" ? "Link Copied" : copyState === "error" ? "Copy Failed" : "Copy Link"}
+                    {copyState === "success" ? <Check className="ml-1.5 h-4 w-4" /> : <Copy className="ml-1.5 h-4 w-4" />}
+                  </Button>
                   <Button variant="outline" size="lg" asChild className="border-border/70">
                     <Link to="/hackathons">Browse more</Link>
                   </Button>
                 </div>
+                <p id="copy-link-status" className="mt-2 text-sm text-muted-foreground" aria-live="polite">
+                  {copyState === "success" ? "HackRadar link copied to your clipboard." : copyState === "error" ? "Unable to copy the link. Please copy the page address manually." : ""}
+                </p>
               </div>
 
               <div className="glass-surface rounded-[2rem] p-5">
