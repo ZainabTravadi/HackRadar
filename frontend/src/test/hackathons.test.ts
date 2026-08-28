@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { filterHackathons, type Hackathon } from "../data/hackathons";
+import { formatHackathonDate } from "@/lib/date";
 
 const sampleHackathons: Hackathon[] = [
   {
@@ -36,6 +37,32 @@ const sampleHackathons: Hackathon[] = [
   },
 ];
 
+describe("formatHackathonDate", () => {
+  it("formats a valid UTC date using the project display format", () => {
+    expect(formatHackathonDate("2026-08-28T00:00:00.000Z")).toBe("Aug 28, 2026");
+  });
+
+  it("formats a date with a time component without drifting across timezone boundaries", () => {
+    expect(formatHackathonDate("2026-08-28T18:45:00.000Z")).toBe("Aug 28, 2026");
+  });
+
+  it("returns a fallback for missing or empty values", () => {
+    expect(formatHackathonDate(null)).toBe("Date unavailable");
+    expect(formatHackathonDate(undefined)).toBe("Date unavailable");
+    expect(formatHackathonDate("   ")).toBe("Date unavailable");
+  });
+
+  it("returns a fallback for invalid dates", () => {
+    expect(formatHackathonDate("not-a-date")).toBe("Date unavailable");
+    expect(formatHackathonDate("2026-02-30T00:00:00.000Z")).toBe("Date unavailable");
+  });
+
+  it("preserves the calendar day for UTC timestamps near timezone boundaries", () => {
+    expect(formatHackathonDate("2026-12-31T23:30:00.000Z")).toBe("Dec 31, 2026");
+    expect(formatHackathonDate("2026-01-01T00:30:00.000Z")).toBe("Jan 1, 2026");
+  });
+});
+
 describe("filterHackathons", () => {
   it("filters and sorts live hackathon data correctly", () => {
     const result = filterHackathons(sampleHackathons, {
@@ -47,7 +74,6 @@ describe("filterHackathons", () => {
       sort: "closing",
     });
 
-    console.log("filterHackathons result", result.map((hackathon) => hackathon.slug));
     expect(result).toHaveLength(1);
     expect(result[0].slug).toBe("alpha");
   });
