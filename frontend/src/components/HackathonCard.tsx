@@ -28,7 +28,8 @@ export const HackathonCard = ({ h }: { h: Hackathon }) => {
   return (
     <Link
       to={`/h/${h.slug}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-card/95 p-5 shadow-card transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-primary/40"
+      aria-label={`View ${h.title} hackathon details`}
+      className="group relative flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-card/95 p-5 shadow-card transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div className={`pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${highlight}`} aria-hidden />
       <div className="pointer-events-none absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl transition-opacity group-hover:opacity-100" aria-hidden />

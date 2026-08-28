@@ -124,6 +124,28 @@ describe("hackathon image fallback", () => {
   });
 });
 
+describe("hackathon card accessibility", () => {
+  it("provides a named keyboard-reachable card link, image alt text, and visible focus styles", () => {
+    render(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(HackathonCard, {
+          h: {
+            ...sampleHackathons[0],
+            imageUrl: "https://example.com/ai-builders.png",
+          },
+        }),
+      ),
+    );
+
+    const cardLink = screen.getByRole("link", { name: "View AI Builders hackathon details" });
+    expect(cardLink).toHaveAttribute("href", "/h/alpha");
+    expect(cardLink).toHaveClass("focus-visible:outline-none", "focus-visible:ring-2");
+    expect(screen.getByRole("img", { name: "AI Builders promotional image" })).toBeInTheDocument();
+  });
+});
+
 describe("filterHackathons", () => {
   it("filters and sorts live hackathon data correctly", () => {
     const result = filterHackathons(sampleHackathons, {
