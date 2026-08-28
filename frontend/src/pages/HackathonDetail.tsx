@@ -6,6 +6,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { HackathonImage } from "@/components/HackathonImage";
 import { formatDate, getDeadlineInfo, getStatus, useHackathon } from "@/data/hackathons";
 
 const HackathonDetail = () => {
@@ -69,6 +70,10 @@ const HackathonDetail = () => {
                 <span className="rounded-full border border-border/70 bg-card/90 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   Source-first
                 </span>
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-[2rem] border border-border/70 bg-card/60 p-2 shadow-card">
+                <HackathonImage src={h.imageUrl} alt={`${h.title} promotional image`} className="rounded-[1.5rem]" />
               </div>
 
               <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-foreground md:text-6xl">{h.title}</h1>

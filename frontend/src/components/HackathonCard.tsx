@@ -5,6 +5,7 @@ import { Hackathon, formatDate, getDeadlineInfo, getStatus } from "@/data/hackat
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { HackathonImage } from "@/components/HackathonImage";
 
 const platformStyles: Record<string, string> = {
   Devpost: "bg-[hsl(var(--accent-cyan)/0.12)] text-[hsl(var(--accent-cyan))] border-[hsl(var(--accent-cyan)/0.2)]",
@@ -43,6 +44,14 @@ export const HackathonCard = ({ h }: { h: Hackathon }) => {
         <StatusBadge variant={status === "Closing Soon" ? "closing" : status === "Open" ? "open" : status === "Ended" ? "ended" : "default"}>
           {deadline.label}
         </StatusBadge>
+      </div>
+
+      <div className="mb-4 overflow-hidden rounded-[1.25rem]">
+        <HackathonImage
+          src={h.imageUrl}
+          alt={`${h.title} promotional image`}
+          className="rounded-[1.25rem]"
+        />
       </div>
 
       <h3 className="relative mb-2 text-[1.05rem] font-semibold leading-tight tracking-tight text-foreground">{h.title}</h3>
