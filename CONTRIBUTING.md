@@ -48,7 +48,7 @@ The Join page on the site also accepts broader interest areas such as outreach, 
 1. Choose the issue form that matches your track or problem type.
 2. Fill in your name, GitHub username, motivation, approach, skills, scope, links, and confirmations.
 3. If the issue is meant to be a contribution request, the form will apply the right track label.
-4. If the issue is already open and you want to work on it, look for the `up-for-grabs` label. If it is present, comment `/assign` or `/claim` on the issue to request assignment.
+4. If the issue is already open and you want to work on it, comment `/assign` or `/claim` on the issue to request assignment.
 5. The workflow will only assign the issue if it is still unassigned and eligible for contributor ownership.
 6. If someone else already owns the issue, the workflow will leave a clear comment and keep the current assignment intact.
 
