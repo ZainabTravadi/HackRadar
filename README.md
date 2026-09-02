@@ -250,3 +250,5 @@ See the full page here: [Roadmap](./frontend/src/pages/Roadmap.tsx)
 ## 🔷 License
 
 This repository does not currently include a LICENSE file. Licensing is pending maintainer decision.
+
+The documentation is corrected and the issue of Improper documentation is resolved.
