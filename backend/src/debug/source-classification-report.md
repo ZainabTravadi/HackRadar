@@ -2,6 +2,8 @@
 
 This report reclassifies each source according to its intended role in the HackRadar ecosystem.
 
+**Note (added for Issue #25):** this report describes intended source roles (PRIMARY, AGGREGATOR, DISCOVERY), which drive scheduler behavior. It is not proof of runtime readiness. For observed runtime results, see `production-hardening-report.md`, where Devpost is the only source marked PASS in the recorded snapshot. The probe date of that snapshot is unknown, so the PASS mark describes that recording, not the current state.
+
 | Source | Classification | Current Status | Capabilities | Pagination | Detail Pages | Metadata Quality | Legal Limitations | Production Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Devpost | PRIMARY | Active public event feed | Full metadata extraction | Yes | Yes | Full | Respect platform terms and rate limits | Production-ready |
