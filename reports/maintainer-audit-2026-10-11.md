@@ -86,7 +86,7 @@ Workflow configuration inspected: CI uses Node 22, `npm ci`, frontend lint/typec
 | File | Change | Regression coverage / result |
 | --- | --- | --- |
 | `.github/workflows/star-required.yml` | Star verification now reaches a verdict before label/comment reads or writes. Verified success is reported first; label cleanup/comment/check publication are independent best-effort attempts with warnings. Missing-star status is attempted before failure labels/comments and `core.setFailed` preserves the failure even if status publication fails. Genuine verification errors set the original error first, then attempt failure status and secondary actions independently. Exemption behavior, triggers, permission scopes, and fork-safe no-checkout behavior remain. | `node scripts/star-required-workflow.test.mjs`: 10 mocked cases passed. |
-| `.github/workflows/ci.yml` | Added a backend-job step to execute the star-workflow regression test on CI; no permission changes. | YAML parsed locally; the script passes locally. Remote CI has not run for this branch. |
+| `.github/workflows/ci.yml` | Added a backend-job step to execute the star-workflow regression test on CI; no permission changes. | YAML parsed locally; the script passes locally. The live backend job passed on maintenance PR #30. |
 | `scripts/star-required-workflow.test.mjs` | Added a dependency-free harness that extracts and executes the actual `github-script` body with mocked GitHub API operations. | Covers success, missing star, API errors, label/comment/check create/update failures, operation order, combined failures, and preserved original errors. |
 | `reports/maintainer-audit-2026-10-11.md` | Added this evidence-based report. | Manually reviewed against local Git and public GitHub API evidence. |
 
@@ -112,8 +112,8 @@ Workflow configuration inspected: CI uses Node 22, `npm ci`, frontend lint/typec
 
 ## H. Required maintainer actions
 
-1. Request changes on PR #27 to resolve explicit readiness claims and contradictory “current/Verified” statements.
-2. Request changes on PR #29 to isolate all status/label/comment operations and add regression tests. Do not merge either contributor PR automatically.
+1. PR #27 has a `CHANGES_REQUESTED` review and a follow-up comment identifying the outstanding readiness/path discrepancies.
+2. PR #29 has a `CHANGES_REQUESTED` review identifying the control-flow and regression-test gaps. Do not merge either contributor PR automatically.
 3. Have a repository admin inspect the log archives for runs #38055091523, #38118718442, and the PR #26 failures. The public run-log endpoint returned 403 without admin rights.
 4. After the maintenance branch is reviewed and merged, rerun star verification on a test PR and confirm that a verified star remains successful under denied comment/label APIs, while missing-star and star-API-error paths still fail.
 5. Approve or explicitly leave pending the `action_required` PR #27/#29 CI and label-inheritance runs according to the repository’s fork-workflow policy.
@@ -122,7 +122,8 @@ Workflow configuration inspected: CI uses Node 22, `npm ci`, frontend lint/typec
 
 ## I. Remaining risks and limitations
 
-- There is no live Actions run for this local maintenance branch, so the mocks and local CI-equivalent commands cannot establish GitHub token behavior or branch-protection outcomes.
+- PR #30 live checks passed on the initial audit-report commit. Its author is the repository owner, so the star workflow followed the owner exemption path; it does not prove the third-party star lookup or side-effect failure paths on live GitHub.
+- The PR #30 checks are attached to commit `e834e9b57dd5c4b94a5aad01281592d395bd7006`; the final report addendum below changes the PR head and will trigger a fresh run.
 - Public GitHub API evidence exposes the failed step and check/job conclusions, but downloading logs requires repository admin rights. The exact error for run #38118718442 remains unknown.
 - PR #26’s older CI and label-inheritance failures have no accessible job details. Their cause is not inferred from current local success.
 - The dated runtime report in PR #27 preserves historical counts whose counting rule/raw output is absent; no live probes were run to recreate them.
@@ -131,10 +132,26 @@ Workflow configuration inspected: CI uses Node 22, `npm ci`, frontend lint/typec
 
 ## J. Recommended next steps
 
-1. Review and commit this maintenance branch, then open a maintenance PR; do not push directly to `main`.
-2. Require its new mocked workflow tests and normal CI checks to pass on GitHub.
-3. Merge the reviewed workflow fix before relying on it for `pull_request_target` events; a PR-branch edit alone cannot change base-branch execution.
-4. Rerun the failed star-verification scenario and inspect admin-only logs/settings to establish why comment/label calls were rejected.
-5. Request changes on PR #27 and #29 using the findings above; keep contributor branches untouched.
-6. Resolve Issue #14 in a separate change consistent with the Fellowship scoring contract.
-7. Update the crawler reports only after a safe, dated, reproducible verification snapshot exists; do not treat the existing undated counts as current.
+1. Review PR #30 and require its CI checks to pass on the final report commit; do not push directly to `main`.
+2. Merge the reviewed workflow fix before relying on it for `pull_request_target` events; a PR-branch edit alone cannot change base-branch execution.
+3. Rerun the failed star-verification scenario and inspect admin-only logs/settings to establish why comment/label calls were rejected.
+4. Keep contributor branches #27 and #29 untouched while their authors address the requested changes.
+5. Resolve Issue #14 in a separate change consistent with the Fellowship scoring contract.
+6. Update the crawler reports only after a safe, dated, reproducible verification snapshot exists; do not treat the existing undated counts as current.
+
+## K. Publication and live-check addendum (2026-10-11)
+
+After the initial local audit, the maintenance branch was pushed and a separate maintenance PR was opened. The contributor branches were not changed.
+
+| Evidence | Observed result |
+| --- | --- |
+| Maintenance branch | `fix/maintainer-ci-audit-local`, based on verified `origin/main` `727f304f5985f7c27a7c751ab2fa79f5af2470d4`; implementation commit `e1d5a6d82dd23f093159fc853ca41eca73f74423`; audit-report commit `e834e9b57dd5c4b94a5aad01281592d395bd7006`. |
+| Maintenance PR | [#30](https://github.com/ZainabTravadi/HackRadar/pull/30), head `e834e9b57dd5c4b94a5aad01281592d395bd7006` at time of check retrieval. |
+| Star verification | [Run 38128107348](https://github.com/ZainabTravadi/HackRadar/actions/runs/38128107348) completed successfully. PR #30 is authored by repository owner `ZainabTravadi`, so the workflow's exemption path ran; this is not live evidence for an external contributor's star lookup or failing secondary API calls. |
+| Backend CI | [Job 114436590851](https://github.com/ZainabTravadi/HackRadar/actions/runs/38128107374/job/114436590851) passed, including the new ten-case mocked harness. |
+| Frontend CI | [Job 114436590752](https://github.com/ZainabTravadi/HackRadar/actions/runs/38128107374/job/114436590752) passed. |
+| PR label inheritance | [Run 38128107314](https://github.com/ZainabTravadi/HackRadar/actions/runs/38128107314) passed. |
+| PR #27 review | [Review](https://github.com/ZainabTravadi/HackRadar/pull/27#pullrequestreview-5482741367) is `CHANGES_REQUESTED`; [follow-up comment](https://github.com/ZainabTravadi/HackRadar/pull/27#issuecomment-6107553523) lists the production-readiness and file-path corrections. Head remains `abca13778a11eb5fdbae9860e0fbb8b47913ddff`. |
+| PR #29 review | [Review](https://github.com/ZainabTravadi/HackRadar/pull/29#pullrequestreview-5482742681) is `CHANGES_REQUESTED`, with required control-flow and test corrections. Head remains `74e76aaef8b7ffd89e101e5b59a2f70d71d4c92e`. |
+
+These live check results apply to the listed PR #30 head only. They do not establish that the fix is active on `main`; the star-workflow fix must be merged before it governs base-branch `pull_request_target` executions. Any report-only commit pushed after these checks requires a fresh check review.
