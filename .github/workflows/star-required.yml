@@ -87,12 +87,20 @@ jobs:
             const hasStarRequiredLabel = labels.includes("star-required");
             const addStarRequiredLabel = async () => {
               if (!hasStarRequiredLabel) {
-                await github.rest.issues.addLabels({ ...issue, labels: ["star-required"] });
+                try {
+                  await github.rest.issues.addLabels({ ...issue, labels: ["star-required"] });
+                } catch (error) {
+                  core.warning(`Could not add star-required label; verdict unchanged: ${error.message}`);
+                }
               }
             };
             const removeStarRequiredLabel = async () => {
               if (hasStarRequiredLabel) {
-                await github.rest.issues.removeLabel({ ...issue, name: "star-required" });
+                try {
+                  await github.rest.issues.removeLabel({ ...issue, name: "star-required" });
+                } catch (error) {
+                  core.warning(`Could not remove star-required label; verdict unchanged: ${error.message}`);
+                }
               }
             };
             const comments = await github.paginate(github.rest.issues.listComments, {
@@ -116,7 +124,11 @@ jobs:
             const verifiedComment = "✅ Repository star verified. The star requirement has been satisfied. Your PR can now proceed through the normal HackRadar CI/review process. 🚀";
             const addCommentOnce = async (body) => {
               if (!hasComment(body)) {
-                await github.rest.issues.createComment({ ...issue, body });
+                try {
+                  await github.rest.issues.createComment({ ...issue, body });
+                } catch (error) {
+                  core.warning(`Could not create comment; verdict unchanged: ${error.message}`);
+                }
               }
             };
 
@@ -162,7 +174,11 @@ jobs:
               await upsertCheck("success", "Repository star verified", "The PR author has starred HackRadar.");
               await addCommentOnce(verifiedComment);
             } catch (error) {
+              try {
+                await upsertCheck("failure", "Unable to verify repository star", "GitHub could not verify the PR author's repository star. The check is failing closed; try again on a new commit.");
+              } catch (checkError) {
+                core.warning(`Could not post failure-status check: ${checkError.message}`);
+              }
               await addStarRequiredLabel();
-              await upsertCheck("failure", "Unable to verify repository star", "GitHub could not verify the PR author's repository star. The check is failing closed; try again on a new commit.");
               core.setFailed(`Unable to verify repository star: ${error.message}`);
             }
