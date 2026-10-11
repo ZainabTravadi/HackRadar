@@ -1,6 +1,6 @@
 # Production Hardening Report
 
-This report reflects the current adapter posture after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes against the current crawler implementation rather than on compilation or unit-test success.
+This report reflects the adapter posture at the time of the recorded runtime snapshot (probe date unknown; see notice below) after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes against the current crawler implementation rather than on compilation or unit-test success.
 
 ## Provenance notice (added for Issue #25)
 
@@ -8,7 +8,7 @@ This report reflects the current adapter posture after the shared parser, valida
 - The per-source counts below are preserved exactly as originally recorded. Their counting rule was never defined, and some rows do not balance (see "Counting notes"). Treat the numbers as an unverifiable snapshot, not as audited record counts.
 - For intended source roles, see `source-classification-report.md`. For what the verification tooling actually measures, see "How to re-verify" below.
 
-## Verified status
+## Recorded snapshot status (unverifiable; see notice above)
 
 | Source | Status | Observed at probe time (unverifiable, see notice above) | Reason |
 | --- | --- | --- | --- |
