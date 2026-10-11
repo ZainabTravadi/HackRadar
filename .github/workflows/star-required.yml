@@ -43,14 +43,10 @@ jobs:
               return;
             }
 
-            const pullRequest = eventPullRequest || (await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: pullNumber,
-            })).data;
-            const author = pullRequest.user;
             const issue = { owner, repo, issue_number: pullNumber };
-            const headSha = pullRequest.head.sha;
+            let pullRequest;
+            let author;
+            let headSha;
 
             const upsertCheck = async (conclusion, title, summary) => {
               const existing = await github.paginate(github.rest.checks.listForRef, {
@@ -80,34 +76,24 @@ jobs:
               }
             };
 
-            const labels = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
-              ...issue,
-              per_page: 100,
-            })).map((label) => label.name);
-            const hasStarRequiredLabel = labels.includes("star-required");
             const addStarRequiredLabel = async () => {
-              if (!hasStarRequiredLabel) {
-                try {
-                  await github.rest.issues.addLabels({ ...issue, labels: ["star-required"] });
-                } catch (error) {
-                  core.warning(`Could not add star-required label; verdict unchanged: ${error.message}`);
-                }
+              const labels = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+                ...issue,
+                per_page: 100,
+              });
+              if (!labels.some((label) => label.name === "star-required")) {
+                await github.rest.issues.addLabels({ ...issue, labels: ["star-required"] });
               }
             };
             const removeStarRequiredLabel = async () => {
-              if (hasStarRequiredLabel) {
-                try {
-                  await github.rest.issues.removeLabel({ ...issue, name: "star-required" });
-                } catch (error) {
-                  core.warning(`Could not remove star-required label; verdict unchanged: ${error.message}`);
-                }
+              const labels = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+                ...issue,
+                per_page: 100,
+              });
+              if (labels.some((label) => label.name === "star-required")) {
+                await github.rest.issues.removeLabel({ ...issue, name: "star-required" });
               }
             };
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              ...issue,
-              per_page: 100,
-            });
-            const hasComment = (body) => comments.some((comment) => comment.body === body);
             const blockedComment = [
               "⭐ Star required before this PR can proceed.",
               "",
@@ -123,16 +109,31 @@ jobs:
             ].join("\\n");
             const verifiedComment = "✅ Repository star verified. The star requirement has been satisfied. Your PR can now proceed through the normal HackRadar CI/review process. 🚀";
             const addCommentOnce = async (body) => {
-              if (!hasComment(body)) {
-                try {
-                  await github.rest.issues.createComment({ ...issue, body });
-                } catch (error) {
-                  core.warning(`Could not create comment; verdict unchanged: ${error.message}`);
-                }
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                ...issue,
+                per_page: 100,
+              });
+              if (!comments.some((comment) => comment.body === body)) {
+                await github.rest.issues.createComment({ ...issue, body });
+              }
+            };
+            const warnIfSecondaryFails = async (description, operation) => {
+              try {
+                await operation();
+              } catch (error) {
+                core.warning(`${description}: ${error.message}`);
               }
             };
 
             try {
+              pullRequest = eventPullRequest || (await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pullNumber,
+              })).data;
+              author = pullRequest.user;
+              headSha = pullRequest.head.sha;
+
               let exempt = author.type === "Bot" || author.login.endsWith("[bot]");
               if (!exempt && ["OWNER", "MEMBER", "COLLABORATOR"].includes(pullRequest.author_association)) {
                 exempt = true;
@@ -152,8 +153,8 @@ jobs:
               }
 
               if (exempt) {
-                await removeStarRequiredLabel();
-                await upsertCheck("success", "Star requirement not applicable", "Repository maintainers and trusted automation are exempt from the star requirement.");
+                await warnIfSecondaryFails("Could not publish exemption check", () => upsertCheck("success", "Star requirement not applicable", "Repository maintainers and trusted automation are exempt from the star requirement."));
+                await warnIfSecondaryFails("Could not remove star-required label", removeStarRequiredLabel);
                 return;
               }
 
@@ -164,21 +165,23 @@ jobs:
               const hasStarred = starredRepositories.some((repository) => repository.full_name.toLowerCase() === `${owner}/${repo}`.toLowerCase());
 
               if (!hasStarred) {
-                await addStarRequiredLabel();
-                await upsertCheck("failure", "Star required", "This external contributor must star HackRadar before the pull request can proceed.");
-                await addCommentOnce(blockedComment);
+                await warnIfSecondaryFails("Could not publish missing-star check", () => upsertCheck("failure", "Star required", "This external contributor must star HackRadar before the pull request can proceed."));
+                core.setFailed("Repository star required before this pull request can proceed.");
+                await warnIfSecondaryFails("Could not add star-required label", addStarRequiredLabel);
+                await warnIfSecondaryFails("Could not post missing-star comment", () => addCommentOnce(blockedComment));
                 return;
               }
 
-              await removeStarRequiredLabel();
-              await upsertCheck("success", "Repository star verified", "The PR author has starred HackRadar.");
-              await addCommentOnce(verifiedComment);
+              await warnIfSecondaryFails("Could not publish verified-star check", () => upsertCheck("success", "Repository star verified", "The PR author has starred HackRadar."));
+              await warnIfSecondaryFails("Could not remove star-required label", removeStarRequiredLabel);
+              await warnIfSecondaryFails("Could not post verified-star comment", () => addCommentOnce(verifiedComment));
             } catch (error) {
-              try {
-                await upsertCheck("failure", "Unable to verify repository star", "GitHub could not verify the PR author's repository star. The check is failing closed; try again on a new commit.");
-              } catch (checkError) {
-                core.warning(`Could not post failure-status check: ${checkError.message}`);
-              }
-              await addStarRequiredLabel();
               core.setFailed(`Unable to verify repository star: ${error.message}`);
+              if (headSha) {
+                await warnIfSecondaryFails("Could not publish star-verification failure check", () => upsertCheck("failure", "Unable to verify repository star", "GitHub could not verify the PR author's repository star. The check is failing closed; try again on a new commit."));
+              }
+              if (pullRequest) {
+                await warnIfSecondaryFails("Could not add star-required label", addStarRequiredLabel);
+                await warnIfSecondaryFails("Could not post star-verification failure comment", () => addCommentOnce(blockedComment));
+              }
             }
