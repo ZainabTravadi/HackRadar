@@ -1,6 +1,6 @@
 # Production Hardening Report
 
-This report reflects the adapter posture at the time of the recorded runtime snapshot (probe date unknown; see notice below) after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes against the current crawler implementation rather than on compilation or unit-test success.
+This report reflects the adapter posture at the time of the recorded runtime snapshot (probe date unknown; see notice below) after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes recorded in that undated snapshot against the crawler implementation as it existed then, rather than on compilation or unit-test success. It is not a claim about the current code.
 
 ## Provenance notice (added for Issue #25)
 
@@ -50,12 +50,12 @@ The Hack2Skill, Reskilll, University, Reddit, LinkedIn, and Twitter rows record 
 
 ## How to re-verify (added for Issue #25)
 
-- `backend/src/debug/verifyAdapter.ts` runs a live single-adapter probe and reports recordsFound, recordsParsed, recordsValid, inserted, updated, duplicates, errors, and database state. It does not produce the accepted/rejected/quality-score columns used above, and it requires network access and a live database.
+- `backend/src/debug/verifyAdapter.ts` runs a live single-adapter probe and reports recordsFound, recordsParsed, recordsValid, inserted, updated, duplicates, errors, and database state. `recordsValid` is calculated as parsed records minus validation issue objects (`Math.max(0, parsed.length - issues.length)`); one record can produce multiple issues, so this is not necessarily a count of distinct valid records. It does not produce the accepted/rejected/quality-score columns used above, and it requires network access and a live database. Warning: running the verifier triggers a crawl and can insert or update database rows (`inserted` / `updated`).
 - `backend/src/crawler/adapters/baseAdapter.ts` logs per-crawl quality lines where accepted equals new plus updated plus duplicates, and rejected equals failed plus invalidPages. These definitions differ from a plain record count.
 - A future re-verification should record the date, command, code revision, probed URLs, and raw output alongside the results.
 
-## Takeaways
+## Takeaways from that snapshot (not current conclusions)
 
-- Devpost is the only adapter that clearly passed the runtime bar in this verification pass.
-- The hardening changes are working as intended: the shared pipeline now rejects weak, generic, or navigation-like content instead of fabricating records.
-- Several platforms are either rate-limited, anti-bot protected, account-gated, or simply do not expose a reliable public event feed. These should remain LIMITED or FAIL rather than being treated as fully production-ready.
+- In that recorded snapshot, Devpost was the only adapter marked PASS.
+- The recorded snapshot shows zero accepted records for most sources associated with generic, navigation-like, or incomplete content. This describes the recorded results and does not establish current behavior or independently prove that the hardening changes worked as intended.
+- In that snapshot, several platforms appeared rate-limited, anti-bot protected, account-gated, or without a reliable public event feed. They were left as LIMITED or FAIL in that recording.
