@@ -1,10 +1,16 @@
 # Production Hardening Report
 
-This report reflects the current adapter posture after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes against the current crawler implementation rather than on compilation or unit-test success.
+This report reflects the adapter posture at the time of the recorded runtime snapshot (probe date unknown; see notice below) after the shared parser, validator, normalization, and adapter hardening pass. The status below is based on live runtime probes recorded in that undated snapshot against the crawler implementation as it existed then, rather than on compilation or unit-test success. It is not a claim about the current code.
 
-## Verified status
+## Provenance notice (added for Issue #25)
 
-| Source | Status | Evidence from runtime probe | Reason |
+- This report is a point-in-time snapshot. The original runtime probes were recorded on an unknown date. Both reports were committed on 2026-07-13, but the commit date is not the probe date: no probe timestamp, command, code revision, probed URL list, or raw output was recorded.
+- The per-source counts below are preserved exactly as originally recorded. Their counting rule was never defined, and some rows do not balance (see "Counting notes"). Treat the numbers as an unverifiable snapshot, not as audited record counts.
+- For intended source roles, see `source-classification-report.md`. For what the verification tooling actually measures, see "How to re-verify" below.
+
+## Recorded snapshot status (unverifiable; see notice above)
+
+| Source | Status | Observed at probe time (unverifiable, see notice above) | Reason |
 | --- | --- | --- | --- |
 | Devpost | PASS | HTTP 200; 24 parsed; 15 accepted; 9 rejected; quality score 63 | The public API returned usable event listings and the validator accepted a meaningful subset. |
 | MLH | LIMITED | HTTP 200; 14 parsed; 0 accepted; 14 rejected | The page returned mostly image/navigation-like items rather than hackathon records. |
@@ -32,8 +38,24 @@ This report reflects the current adapter posture after the shared parser, valida
 | Facebook | FAIL | HTTP 400 on the search URL | The event search endpoint was not accessible to the crawler. |
 | Google | LIMITED | HTTP 200; 1 parsed; 0 accepted; 1 rejected | Search results were generic and failed validation. |
 
-## Takeaways
+## Counting notes (added for Issue #25)
 
-- Devpost is the only adapter that clearly passed the runtime bar in this verification pass.
-- The hardening changes are working as intended: the shared pipeline now rejects weak, generic, or navigation-like content instead of fabricating records.
-- Several platforms are either rate-limited, anti-bot protected, account-gated, or simply do not expose a reliable public event feed. These should remain LIMITED or FAIL rather than being treated as fully production-ready.
+The figures above are unchanged from the original recording. The following rows cannot be reconciled because accepted plus rejected does not equal parsed, and the original counting rule is unknown:
+
+- Lablab: 12 parsed, 0 accepted, 9 rejected (3 unaccounted).
+- AngelHack: 7 parsed, 0 accepted, 4 rejected (3 unaccounted).
+- Hack Club: 25 parsed, 0 accepted, 1 rejected (24 unaccounted).
+
+The Hack2Skill, Reskilll, University, Reddit, LinkedIn, and Twitter rows record no rejected count, and only the Devpost row records a quality score. No corrections have been applied because the underlying evidence is unavailable.
+
+## How to re-verify (added for Issue #25)
+
+- `backend/src/debug/verifyAdapter.ts` runs a live single-adapter probe and reports recordsFound, recordsParsed, recordsValid, inserted, updated, duplicates, errors, and database state. `recordsValid` is calculated as parsed records minus validation issue objects (`Math.max(0, parsed.length - issues.length)`); one record can produce multiple issues, so this is not necessarily a count of distinct valid records. It does not produce the accepted/rejected/quality-score columns used above, and it requires network access and a live database. Warning: running the verifier triggers a crawl and can insert or update database rows (`inserted` / `updated`).
+- `backend/src/crawler/adapters/baseAdapter.ts` logs per-crawl quality lines where accepted equals new plus updated plus duplicates, and rejected equals failed plus invalidPages. These definitions differ from a plain record count.
+- A future re-verification should record the date, command, code revision, probed URLs, and raw output alongside the results.
+
+## Takeaways from that snapshot (not current conclusions)
+
+- In that recorded snapshot, Devpost was the only adapter marked PASS.
+- The recorded snapshot shows zero accepted records for most sources associated with generic, navigation-like, or incomplete content. This describes the recorded results and does not establish current behavior or independently prove that the hardening changes worked as intended.
+- In that snapshot, several platforms appeared rate-limited, anti-bot protected, account-gated, or without a reliable public event feed. They were left as LIMITED or FAIL in that recording.
