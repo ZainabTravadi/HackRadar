@@ -58,4 +58,4 @@ The Hack2Skill, Reskilll, University, Reddit, LinkedIn, and Twitter rows record 
 
 - In that recorded snapshot, Devpost was the only adapter marked PASS.
 - The recorded snapshot shows zero accepted records for most sources associated with generic, navigation-like, or incomplete content. This describes the recorded results and does not establish current behavior or independently prove that the hardening changes worked as intended.
-- In that snapshot, several platforms appeared rate-limited, anti-bot protected, account-gated, or without a reliable public event feed. They were left as LIMITED or FAIL in that recording.
+- Several sources recorded limited or unsuccessful results in this historical snapshot, including zero accepted records for some sources. The available evidence does not establish the causes of these outcomes or confirm current source behavior.
