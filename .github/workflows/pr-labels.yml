@@ -1,7 +1,12 @@
 name: PR Label Inheritance
 
+# Label inheritance writes labels, and GitHub only grants a write token to the
+# base repository context. A `pull_request` run from a fork receives a read-only
+# token and fails with "403 Resource not accessible by integration", so this uses
+# `pull_request_target` to run trusted base-branch code with the required scope.
+# Never check out or execute the pull request head with this token.
 on:
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - reopened
@@ -21,8 +26,10 @@ jobs:
     name: Copy inheritable labels from linked issues
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout base repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Ensure canonical labels exist
         run: node scripts/hackradar-contributor-automation.mjs ensure-labels
