@@ -31,7 +31,8 @@ const features = [
 const orbitRings = ["border-primary/25", "border-cyan-400/20", "border-violet-400/20"];
 
 const Index = () => {
-  const { data: hackathons = [], isLoading } = useHackathons();
+  const { data: hackathons = [], isLoading, isError, error, refetch } = useHackathons();
+  const hasError = isError || Boolean(error);
   const preview = useMemo(
     () =>
       [...hackathons]
@@ -60,8 +61,14 @@ const Index = () => {
           <div className="grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr]">
             <div className="mx-auto max-w-2xl lg:mx-0">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground backdrop-blur">
-                <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_0_6px_hsl(var(--success)/0.12)] motion-safe:animate-pulse-soft" />
-                Live - {hackathons.length} events indexed
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    hasError
+                      ? "bg-destructive"
+                      : "bg-success shadow-[0_0_0_6px_hsl(var(--success)/0.12)] motion-safe:animate-pulse-soft"
+                  }`}
+                />
+                {hasError ? "Live index unavailable" : `Live - ${hackathons.length} events indexed`}
               </div>
 
           <h1 className="font-display text-balance text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
@@ -218,6 +225,21 @@ const Index = () => {
             {isLoading ? (
               <div className="col-span-3 rounded-[1.5rem] border border-dashed border-border/70 bg-card/70 p-12 text-center text-muted-foreground">
                 Loading hackathons...
+              </div>
+            ) : hasError ? (
+              <div
+                role="alert"
+                className="col-span-3 rounded-[1.5rem] border border-destructive/20 bg-destructive/10 p-12 text-center"
+              >
+                <h2 className="font-display text-2xl font-bold tracking-tight text-destructive">
+                  Failed to load live hackathons
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+                  The homepage could not be loaded right now. Please try again.
+                </p>
+                <Button type="button" variant="outline" onClick={() => refetch()} className="mt-6 rounded-full">
+                  Retry
+                </Button>
               </div>
             ) : hackathons.length === 0 ? (
               <div className="col-span-3 rounded-[1.5rem] border border-dashed border-border/70 bg-card/70 p-12 text-center">
