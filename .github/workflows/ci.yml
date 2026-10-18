@@ -30,6 +30,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Test PR label workflow security boundary
+        run: node ../scripts/pr-label-workflow.test.mjs
+
       - name: Lint
         run: npm run lint
 
