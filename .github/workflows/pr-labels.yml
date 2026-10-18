@@ -1,7 +1,9 @@
 name: PR Label Inheritance
 
 on:
-  pull_request:
+  # Label writes need the base repository token for fork PRs. Keep this workflow
+  # on trusted base-branch code; never check out or execute the PR head here.
+  pull_request_target:
     types:
       - opened
       - reopened

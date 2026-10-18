@@ -62,6 +62,9 @@ jobs:
       - name: Test star verification workflow
         run: node ../scripts/star-required-workflow.test.mjs
 
+      - name: Test PR label workflow permissions
+        run: node ../scripts/pr-label-workflow.test.mjs
+
       - name: Install
         run: npm ci
 
