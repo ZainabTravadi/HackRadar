@@ -8,6 +8,7 @@ const GITHUB_API_BASE = process.env.GITHUB_API_URL || "https://api.github.com";
 const GITHUB_GRAPHQL_BASE = process.env.GITHUB_GRAPHQL_URL || "https://api.github.com/graphql";
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || "";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+const GITHUB_TOKEN_SOURCE = process.env.GITHUB_TOKEN ? "GITHUB_TOKEN" : process.env.GH_TOKEN ? "GH_TOKEN" : "none";
 
 const STOP_WORDS = new Set([
   "a",
@@ -301,6 +302,26 @@ export function parseIssueTemplateBody(body) {
   };
 }
 
+export function resolvePullRequestLabelTarget(event, configuredRepository) {
+  const pullRequest = event?.pull_request;
+  const issueNumber = pullRequest?.number;
+  const baseRepository = pullRequest?.base?.repo?.full_name;
+
+  if (!Number.isSafeInteger(issueNumber) || issueNumber < 1) {
+    throw new Error("Pull request event is missing a valid pull_request.number");
+  }
+  if (typeof baseRepository !== "string" || !/^[^/]+\/[^/]+$/.test(baseRepository)) {
+    throw new Error("Pull request event is missing pull_request.base.repo.full_name");
+  }
+  if (configuredRepository && configuredRepository.toLowerCase() !== baseRepository.toLowerCase()) {
+    throw new Error(
+      `Pull request base repository ${baseRepository} does not match configured repository ${configuredRepository}`,
+    );
+  }
+
+  return { repository: baseRepository, issueNumber };
+}
+
 async function githubRequest(method, route, body) {
   if (!GITHUB_REPOSITORY) {
     throw new Error("GITHUB_REPOSITORY is required");
@@ -326,8 +347,14 @@ async function githubRequest(method, route, body) {
   const payload = text ? safeJsonParse(text) : null;
 
   if (!response.ok) {
-    const message = payload?.message || text || response.statusText;
-    const error = new Error(`GitHub API ${method} ${route} failed: ${response.status} ${message}`);
+    const message = typeof payload?.message === "string" ? payload.message : response.statusText || "Unknown error";
+    const acceptedPermissions = response.headers.get("x-accepted-github-permissions") || "unavailable";
+    const requestId = response.headers.get("x-github-request-id") || "unavailable";
+    const error = new Error(
+      `GitHub API ${method} ${route} failed: ${response.status} ${message}; ` +
+        `X-Accepted-GitHub-Permissions: ${acceptedPermissions}; ` +
+        `X-GitHub-Request-Id: ${requestId}; token source: ${GITHUB_TOKEN_SOURCE}`,
+    );
     error.status = response.status;
     error.body = payload || text;
     throw error;
@@ -753,6 +780,7 @@ async function handlePrLabelInheritance(config, event) {
   if (!pr || isBotUser(pr.user)) {
     return;
   }
+  const target = resolvePullRequestLabelTarget(event, GITHUB_REPOSITORY);
 
   const body = String(pr.body || "");
   const linkedIssueNumbers = extractLinkedIssueNumbers(body);
@@ -781,7 +809,9 @@ async function handlePrLabelInheritance(config, event) {
   const missing = [...labels].filter((label) => !existing.has(label));
 
   if (missing.length > 0) {
-    await addIssueLabels(pr.number, missing);
+    await githubRequest("POST", `/repos/${target.repository}/issues/${target.issueNumber}/labels`, {
+      labels: unique(missing),
+    });
   }
 }
 
