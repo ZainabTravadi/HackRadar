@@ -21,8 +21,12 @@ function assertSecureWorkflow(candidate) {
   assert.deepEqual(candidate.on.pull_request_target.types, ["opened", "reopened", "synchronize", "edited"], "pull_request_target events must remain explicit");
   assertKeys(candidate.on.pull_request_target, ["types"], "pull_request_target trigger");
 
-  assertKeys(candidate.permissions, ["contents", "issues"], "top-level permissions");
-  assert.deepEqual(candidate.permissions, { contents: "read", issues: "write" }, "permissions must stay at the intended minimum");
+  assertKeys(candidate.permissions, ["contents", "issues", "pull-requests"], "top-level permissions");
+  assert.deepEqual(
+    candidate.permissions,
+    { contents: "read", issues: "write", "pull-requests": "write" },
+    "permissions must stay at the intended minimum",
+  );
 
   assertKeys(candidate.concurrency, ["group", "cancel-in-progress"], "concurrency");
   assert.equal(candidate.concurrency.group, "pr-labels-${{ github.event.pull_request.number }}");
@@ -93,5 +97,8 @@ rejectsMutation("changed trigger", (candidate) => {
 rejectsMutation("escalated or missing required permissions", (candidate) => {
   candidate.permissions.contents = "write";
 });
+rejectsMutation("unexpected permission key", (candidate) => {
+  candidate.permissions.actions = "write";
+});
 
-console.log("PR label workflow structure is allowlisted; intended workflow passes and 10 unsafe mutations are rejected.");
+console.log("PR label workflow structure is allowlisted; intended workflow passes and 11 unsafe mutations are rejected.");
