@@ -43,16 +43,16 @@ const Submit = () => {
             </div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-border bg-card p-8 shadow-card">
-              <Field label="Title">
-                <Input required placeholder="e.g. Global AI Summit Hack" />
+              <Field label="Title" htmlFor="submit-title">
+                <Input id="submit-title" required placeholder="e.g. Global AI Summit Hack" />
               </Field>
-              <Field label="Link">
-                <Input required type="url" placeholder="https://..." />
+              <Field label="Link" htmlFor="submit-link">
+                <Input id="submit-link" required type="url" placeholder="https://..." />
               </Field>
               <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Platform">
+                <Field label="Platform" htmlFor="submit-platform">
                   <Select>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger id="submit-platform"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Devpost">Devpost</SelectItem>
                       <SelectItem value="MLH">MLH</SelectItem>
@@ -62,9 +62,9 @@ const Submit = () => {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Mode">
+                <Field label="Mode" htmlFor="submit-mode">
                   <Select>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger id="submit-mode"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Online">Online</SelectItem>
                       <SelectItem value="In-person">In-person</SelectItem>
@@ -73,11 +73,11 @@ const Submit = () => {
                   </Select>
                 </Field>
               </div>
-              <Field label="Registration Deadline">
-                <Input required type="date" />
+              <Field label="Registration Deadline" htmlFor="submit-registration-deadline">
+                <Input id="submit-registration-deadline" required type="date" />
               </Field>
-              <Field label="Description">
-                <Textarea required rows={4} placeholder="What's the hackathon about?" />
+              <Field label="Description" htmlFor="submit-description">
+                <Textarea id="submit-description" required rows={4} placeholder="What's the hackathon about?" />
               </Field>
               <Button type="submit" size="lg" className="w-full bg-primary-gradient shadow-glow">
                 Submit Hackathon
@@ -90,9 +90,9 @@ const Submit = () => {
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) => (
   <div className="space-y-2">
-    <Label className="text-sm font-medium">{label}</Label>
+    <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
     {children}
   </div>
 );
