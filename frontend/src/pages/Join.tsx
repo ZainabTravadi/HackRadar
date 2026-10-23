@@ -78,6 +78,7 @@ const CONTRIBUTION_STEPS = [
 export default function Join() {
   const formRef = useRef<HTMLDivElement | null>(null);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const submittingRef = useRef(false);
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -87,7 +88,6 @@ export default function Join() {
   const [areas, setAreas] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   const [availability, setAvailability] = useState("");
-  const [contributionTypes] = useState<string[]>([]);
   const [motivation, setMotivation] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +118,7 @@ export default function Join() {
   }
 
   async function submit() {
+    if (submittingRef.current) return;
     setError(null);
 
     if (!name.trim() || !/\S+@\S+\.\S+/.test(email)) {
@@ -134,6 +135,7 @@ export default function Join() {
       return;
     }
 
+    submittingRef.current = true;
     setStatus("submitting");
 
     try {
@@ -148,7 +150,6 @@ export default function Join() {
           contributionAreas: areas,
           experienceLevel: experience,
           availability,
-          contributionTypes,
           motivation,
         }),
       });
@@ -159,6 +160,8 @@ export default function Join() {
       setStatus("error");
       const message = err instanceof Error ? err.message : String(err);
       setError(message || "Submission failed");
+    } finally {
+      submittingRef.current = false;
     }
   }
 
@@ -491,12 +494,6 @@ export default function Join() {
                       </div>
                     </div>
                   )}
-
-                  <div className="flex justify-end border-t border-border/70 pt-5">
-                    <Button onClick={() => void submit()} disabled={status === "submitting"} className="rounded-full bg-primary-gradient px-6">
-                      {status === "submitting" ? "Submitting..." : "Submit"}
-                    </Button>
-                  </div>
                 </div>
               </section>
             </div>
