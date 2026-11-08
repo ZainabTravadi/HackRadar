@@ -51,6 +51,17 @@ export async function loadContributorConfig() {
   return JSON.parse(raw);
 }
 
+export function difficultyToPoints(difficulty) {
+  const points = {
+    easy: 5,
+    medium: 15,
+    hard: 30,
+    expert: 50,
+  };
+
+  return points[difficulty];
+}
+
 export function normalizeText(value) {
   return String(value ?? "")
     .toLowerCase()
