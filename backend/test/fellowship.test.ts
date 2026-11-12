@@ -44,6 +44,8 @@ async function run() {
   assert.strictEqual(normalizeDifficultyLabel('difficulty: hard'), 'hard');
   assert.strictEqual(normalizeDifficultyLabel('Expert'), 'expert');
   assert.strictEqual(difficultyToPoints('easy'), 5);
+  assert.strictEqual(difficultyToPoints('medium'), 15);
+  assert.strictEqual(difficultyToPoints('hard'), 30);
   assert.strictEqual(difficultyToPoints('expert'), 50);
   assert.strictEqual(pickDifficultyFromLabels(['backend', 'difficulty: medium']), 'medium');
 

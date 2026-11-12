@@ -3,6 +3,14 @@ import 'dotenv/config';
 import { createServer, type ServerResponse, type IncomingMessage } from 'node:http';
 import { URL } from 'node:url';
 
+import {
+  CRAWLER_HISTORY_DEFAULT_LIMIT,
+  CRAWLER_HISTORY_MAX_LIMIT,
+  CRAWLER_METRICS_DEFAULT_HOURS,
+  CRAWLER_METRICS_MAX_HOURS,
+  parsePositiveBoundedNumber,
+} from './utils/crawlerQueryParams';
+
 import { db } from './db';
 import { hackathons, type Hackathon as DbHackathon } from './db/schema';
 import { distributedLockService } from './crawler/core/distributedLock';
@@ -225,7 +233,7 @@ function buildWhereClause(params: URLSearchParams) {
   if (platform) {
     const p = platform.toLowerCase();
     const allowed = [
-      'devpost','mlh','devfolio','unstop','dorahacks','taikai','hackerearth','hack2skill','reskilll','lablab','ethglobal','angelhack','hackclub','university','eventbrite','luma','meetup','github','reddit','discord','telegram','linkedin','twitter','facebook','google','manual'
+      'devpost', 'mlh', 'devfolio', 'unstop', 'dorahacks', 'taikai', 'hackerearth', 'hack2skill', 'reskilll', 'lablab', 'ethglobal', 'angelhack', 'hackclub', 'university', 'eventbrite', 'luma', 'meetup', 'github', 'reddit', 'discord', 'telegram', 'linkedin', 'twitter', 'facebook', 'google', 'manual'
     ];
     if (!allowed.includes(p)) throw new Error(`Invalid source/platform parameter: ${platform}`);
     clauses.push(sql`${hackathons.source} = ${p}`);
@@ -346,17 +354,31 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (url.pathname === '/crawler/history' && req.method === 'GET') {
-    const limit = Number(url.searchParams.get('limit') || '100');
+    let limit: number;
+    try {
+      limit = parsePositiveBoundedNumber(url.searchParams.get('limit'), 'limit', CRAWLER_HISTORY_DEFAULT_LIMIT, CRAWLER_HISTORY_MAX_LIMIT, true);
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : 'Invalid limit parameter.' }, origin);
+      return;
+    }
+
     const metrics = await db.select().from(crawlerMetrics).orderBy(desc(crawlerMetrics.startedAt)).limit(limit);
     sendJson(res, 200, metrics, origin);
     return;
   }
 
   if (url.pathname === '/crawler/metrics' && req.method === 'GET') {
-    const hours = Number(url.searchParams.get('hours') || '24');
+    let hours: number;
+    try {
+      hours = parsePositiveBoundedNumber(url.searchParams.get('hours'), 'hours', CRAWLER_METRICS_DEFAULT_HOURS, CRAWLER_METRICS_MAX_HOURS);
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : 'Invalid hours parameter.' }, origin);
+      return;
+    }
+
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
     const metrics = await db.select().from(crawlerMetrics).where(sql`${crawlerMetrics.startedAt} >= ${since}`).orderBy(desc(crawlerMetrics.startedAt));
-    
+
     const aggregated = metrics.reduce((acc, m) => {
       if (!acc[m.source]) acc[m.source] = { total: 0, success: 0, failed: 0, itemsFound: 0, itemsNew: 0, avgDuration: 0 };
       acc[m.source].total++;
@@ -366,7 +388,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       acc[m.source].avgDuration = ((acc[m.source].avgDuration * (acc[m.source].total - 1)) + (m.durationMs || 0)) / acc[m.source].total;
       return acc;
     }, {} as Record<string, any>);
-    
+
     sendJson(res, 200, { periodHours: hours, sources: aggregated, raw: metrics }, origin);
     return;
   }

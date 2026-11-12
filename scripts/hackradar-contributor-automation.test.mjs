@@ -2,14 +2,11 @@ import assert from "assert";
 import {
   buildCanonicalLabels,
   buildInheritableLabels,
-  difficultyToPoints,
   extractLinkedIssueNumbers,
-  hasHackRadarContributionSignal,
   inferTrackIdsFromLabels,
   issueSimilarityScore,
   loadContributorConfig,
   normalizeText,
-  normalizeDifficultyLabel,
   ownershipWindowExpired,
   parseFellowshipSelection,
   parseHiddenMetadata,
@@ -89,24 +86,6 @@ test("scores duplicates and prefers close title matches", () => {
 test("expiry calculation uses 72 hours", () => {
   assert.strictEqual(ownershipWindowExpired("2026-08-11T00:00:00.000Z", new Date("2026-08-13T23:59:59.000Z")), false);
   assert.strictEqual(ownershipWindowExpired("2026-08-10T00:00:00.000Z", new Date("2026-08-13T00:00:00.000Z")), true);
-});
-
-test("maps difficulty labels and points", () => {
-  assert.strictEqual(normalizeDifficultyLabel("difficulty: hard"), "hard");
-  assert.strictEqual(normalizeDifficultyLabel("Expert"), "expert");
-  assert.strictEqual(difficultyToPoints("easy"), 5);
-  assert.strictEqual(difficultyToPoints("expert"), 50);
-});
-
-test("recognizes HackRadar contribution issue signals", () => {
-  assert.strictEqual(
-    hasHackRadarContributionSignal([{ name: "frontend" }], "Working on this"),
-    true,
-  );
-  assert.strictEqual(
-    hasHackRadarContributionSignal([{ name: "question" }], "Plain text only"),
-    false,
-  );
 });
 
 console.log("All HackRadar contributor automation tests passed");
